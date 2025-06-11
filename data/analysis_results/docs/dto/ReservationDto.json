@@ -1,0 +1,38 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/dto/ReservationDto.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "dto",
+  "code": "package com.skax.library.dto;\n\nimport com.fasterxml.jackson.annotation.JsonFormat;\nimport com.skax.library.model.Reservation;\nimport jakarta.validation.constraints.Future;\nimport jakarta.validation.constraints.NotNull;\nimport lombok.Getter;\nimport lombok.Setter;\n\nimport java.time.LocalDateTime;\n\n@Getter\n@Setter\npublic class ReservationDto extends BaseDto {\n    private Long bookId;\n    private BookDto book;\n    \n    private Long memberId;\n    private MemberDto member;\n    \n    @JsonFormat(pattern = \"yyyy-MM-dd HH:mm:ss\")\n    private LocalDateTime reservationDate;\n    \n    @Future(message = \"Expiry date must be in the future\")\n    @JsonFormat(pattern = \"yyyy-MM-dd HH:mm:ss\")\n    private LocalDateTime expiryDate;\n    \n    @JsonFormat(pattern = \"yyyy-MM-dd HH:mm:ss\")\n    private LocalDateTime fulfillmentDate;\n    \n    private Boolean notificationSent;\n    private Reservation.ReservationStatus status;\n    \n    // For responses\n    private Integer queuePosition;\n    private LoanDto loan;\n    \n    public static ReservationDto fromEntity(Reservation reservation) {\n        if (reservation == null) {\n            return null;\n        }\n        \n        ReservationDto dto = new ReservationDto();\n        dto.setId(reservation.getId());\n        \n        if (reservation.getBook() != null) {\n            dto.setBookId(reservation.getBook().getId());\n            dto.setBook(BookDto.fromEntity(reservation.getBook()));\n        }\n        \n        if (reservation.getMember() != null) {\n            dto.setMemberId(reservation.getMember().getId());\n            dto.setMember(MemberDto.fromEntity(reservation.getMember()));\n        }\n        \n        dto.setReservationDate(reservation.getReservationDate());\n        dto.setExpiryDate(reservation.getExpiryDate());\n        dto.setFulfillmentDate(reservation.getFulfillmentDate());\n        dto.setNotificationSent(reservation.getNotificationSent());\n        dto.setStatus(reservation.getStatus());\n        dto.setCreatedAt(reservation.getCreatedAt());\n        dto.setUpdatedAt(reservation.getUpdatedAt());\n        \n        return dto;\n    }\n    \n    public Reservation toEntity() {\n        Reservation reservation = new Reservation();\n        reservation.setReservationDate(this.reservationDate != null ? this.reservationDate : LocalDateTime.now());\n        reservation.setExpiryDate(this.expiryDate);\n        reservation.setFulfillmentDate(this.fulfillmentDate);\n        reservation.setNotificationSent(this.notificationSent != null ? this.notificationSent : false);\n        reservation.setStatus(this.status != null ? this.status : Reservation.ReservationStatus.PENDING);\n        \n        return reservation;\n    }\n}\n",
+  "classes": [
+    {
+      "name": "ReservationDto",
+      "methods": [
+        {
+          "name": "fromEntity",
+          "returnType": "ReservationDto",
+          "params": [
+            "Reservation reservation"
+          ]
+        },
+        {
+          "name": "toEntity",
+          "returnType": "Reservation",
+          "params": []
+        }
+      ]
+    }
+  ],
+  "references": [
+    "Reservation",
+    "lombok.Getter",
+    "java.time.LocalDateTime",
+    "com.fasterxml.jackson.annotation.JsonFormat",
+    "jakarta.validation.constraints.NotNull",
+    "jakarta.validation.constraints.Future",
+    "lombok.Setter",
+    "ReservationDto",
+    "com.skax.library.model.Reservation"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

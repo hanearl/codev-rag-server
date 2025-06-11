@@ -1,0 +1,606 @@
+{
+  "projectName": "-",
+  "language": "java",
+  "framework": "spring-boot",
+  "rootPath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt",
+  "modules": [
+    {
+      "name": "springbootsamplepjt",
+      "path": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/springbootsamplepjt",
+      "files": [
+        "SpringbootSamplePjtApplication.java"
+      ]
+    },
+    {
+      "name": "library",
+      "path": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library",
+      "files": [
+        "LibraryManagementApplication.java"
+      ]
+    },
+    {
+      "name": "dto",
+      "path": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/dto",
+      "files": [
+        "BookDto.java",
+        "CategoryDto.java",
+        "FineDto.java",
+        "LoanDto.java",
+        "MemberDto.java",
+        "ReservationDto.java",
+        "BaseDto.java"
+      ]
+    },
+    {
+      "name": "repository",
+      "path": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/repository",
+      "files": [
+        "LoanRepository.java",
+        "FineRepository.java",
+        "ReservationRepository.java",
+        "MemberRepository.java",
+        "BookRepository.java",
+        "CategoryRepository.java"
+      ]
+    },
+    {
+      "name": "mapper",
+      "path": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/mapper",
+      "files": [
+        "CategoryMapper.java",
+        "BookMapper.java",
+        "MemberMapper.java"
+      ]
+    },
+    {
+      "name": "controller",
+      "path": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/controller",
+      "files": [
+        "LoanController.java",
+        "ReservationController.java",
+        "FineController.java",
+        "CategoryController.java",
+        "MemberController.java",
+        "BookController.java"
+      ]
+    },
+    {
+      "name": "model",
+      "path": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/model",
+      "files": [
+        "BookCategory.java",
+        "Reservation.java",
+        "Category.java",
+        "BaseEntity.java",
+        "Loan.java",
+        "Book.java",
+        "Member.java",
+        "Fine.java"
+      ]
+    },
+    {
+      "name": "service",
+      "path": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/service",
+      "files": [
+        "MemberService.java",
+        "LoanService.java",
+        "ReservationService.java",
+        "FineService.java",
+        "CategoryService.java",
+        "BookService.java"
+      ]
+    },
+    {
+      "name": "impl",
+      "path": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/service/impl",
+      "files": [
+        "BookServiceImpl.java",
+        "CategoryServiceImpl.java",
+        "ReservationServiceImpl.java",
+        "FineServiceImpl.java",
+        "MemberServiceImpl.java",
+        "LoanServiceImpl.java"
+      ]
+    },
+    {
+      "name": "exception",
+      "path": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/exception",
+      "files": [
+        "InvalidLoanExtensionException.java",
+        "ResourceNotFoundException.java",
+        "ResourceAlreadyExistsException.java",
+        "GlobalExceptionHandler.java",
+        "InvalidPaymentException.java",
+        "BaseException.java",
+        "BookNotAvailableException.java"
+      ]
+    }
+  ],
+  "fileGraph": [
+    {
+      "source": "SpringbootSamplePjtApplication.java",
+      "imports": [
+        "SpringApplication.java",
+        "SpringBootApplication.java"
+      ]
+    },
+    {
+      "source": "LibraryManagementApplication.java",
+      "imports": [
+        "OpenAPIDefinition.java",
+        "Info.java",
+        "SpringApplication.java",
+        "SpringBootApplication.java",
+        "EnableScheduling.java"
+      ]
+    },
+    {
+      "source": "BookDto.java",
+      "imports": [
+        "Book.java",
+        "NotBlank.java",
+        "NotNull.java",
+        "PositiveOrZero.java",
+        "Getter.java",
+        "Setter.java",
+        "HashSet.java",
+        "Set.java"
+      ]
+    },
+    {
+      "source": "CategoryDto.java",
+      "imports": [
+        "Category.java",
+        "NotBlank.java",
+        "Getter.java",
+        "Setter.java"
+      ]
+    },
+    {
+      "source": "FineDto.java",
+      "imports": [
+        "JsonFormat.java",
+        "Fine.java",
+        "DecimalMin.java",
+        "NotNull.java",
+        "Getter.java",
+        "Setter.java",
+        "BigDecimal.java",
+        "LocalDate.java"
+      ]
+    },
+    {
+      "source": "LoanDto.java",
+      "imports": [
+        "JsonFormat.java",
+        "Loan.java",
+        "Future.java",
+        "NotNull.java",
+        "Getter.java",
+        "Setter.java",
+        "LocalDate.java"
+      ]
+    },
+    {
+      "source": "MemberDto.java",
+      "imports": [
+        "Member.java",
+        "Email.java",
+        "NotBlank.java",
+        "Past.java",
+        "Pattern.java",
+        "Getter.java",
+        "Setter.java",
+        "LocalDate.java"
+      ]
+    },
+    {
+      "source": "ReservationDto.java",
+      "imports": [
+        "JsonFormat.java",
+        "Reservation.java",
+        "Future.java",
+        "NotNull.java",
+        "Getter.java",
+        "Setter.java",
+        "LocalDateTime.java"
+      ]
+    },
+    {
+      "source": "BaseDto.java",
+      "imports": [
+        "JsonFormat.java",
+        "Getter.java",
+        "Setter.java",
+        "LocalDateTime.java"
+      ]
+    },
+    {
+      "source": "BookMapper.java",
+      "imports": [
+        "BookDto.java",
+        "Book.java",
+        "Component.java",
+        "List.java",
+        "Collectors.java"
+      ]
+    },
+    {
+      "source": "LoanController.java",
+      "imports": [
+        "LoanDto.java",
+        "LoanService.java",
+        "Operation.java",
+        "Tag.java",
+        "Valid.java",
+        "Page.java",
+        "Pageable.java",
+        "PageableDefault.java",
+        "HttpStatus.java",
+        "ResponseEntity.java",
+        "annotation.java",
+        "List.java"
+      ]
+    },
+    {
+      "source": "ReservationController.java",
+      "imports": [
+        "ReservationDto.java",
+        "ReservationService.java",
+        "Operation.java",
+        "Tag.java",
+        "Valid.java",
+        "Page.java",
+        "Pageable.java",
+        "PageableDefault.java",
+        "HttpStatus.java",
+        "ResponseEntity.java",
+        "annotation.java",
+        "List.java"
+      ]
+    },
+    {
+      "source": "FineController.java",
+      "imports": [
+        "FineDto.java",
+        "FineService.java",
+        "Operation.java",
+        "Tag.java",
+        "Valid.java",
+        "Page.java",
+        "Pageable.java",
+        "PageableDefault.java",
+        "HttpStatus.java",
+        "ResponseEntity.java",
+        "annotation.java",
+        "BigDecimal.java",
+        "List.java"
+      ]
+    },
+    {
+      "source": "CategoryController.java",
+      "imports": [
+        "CategoryDto.java",
+        "CategoryService.java",
+        "Operation.java",
+        "Parameter.java",
+        "Tag.java",
+        "Valid.java",
+        "RequiredArgsConstructor.java",
+        "Page.java",
+        "Pageable.java",
+        "PageableDefault.java",
+        "HttpStatus.java",
+        "ResponseEntity.java",
+        "annotation.java",
+        "List.java"
+      ]
+    },
+    {
+      "source": "MemberController.java",
+      "imports": [
+        "LoanDto.java",
+        "MemberDto.java",
+        "ReservationDto.java",
+        "Member.java",
+        "LoanService.java",
+        "MemberService.java",
+        "ReservationService.java",
+        "Operation.java",
+        "Parameter.java",
+        "Tag.java",
+        "Valid.java",
+        "RequiredArgsConstructor.java",
+        "Page.java",
+        "Pageable.java",
+        "PageableDefault.java",
+        "HttpStatus.java",
+        "ResponseEntity.java",
+        "annotation.java",
+        "List.java"
+      ]
+    },
+    {
+      "source": "BookController.java",
+      "imports": [
+        "BookDto.java",
+        "CategoryDto.java",
+        "Book.java",
+        "BookService.java",
+        "CategoryService.java",
+        "Operation.java",
+        "Parameter.java",
+        "Tag.java",
+        "Valid.java",
+        "Page.java",
+        "Pageable.java",
+        "PageableDefault.java",
+        "HttpStatus.java",
+        "ResponseEntity.java",
+        "annotation.java",
+        "List.java"
+      ]
+    },
+    {
+      "source": "BookCategory.java",
+      "imports": [
+        "persistence.java",
+        "lombok.java"
+      ]
+    },
+    {
+      "source": "Reservation.java",
+      "imports": [
+        "persistence.java",
+        "lombok.java",
+        "LocalDateTime.java"
+      ]
+    },
+    {
+      "source": "Category.java",
+      "imports": [
+        "persistence.java",
+        "lombok.java",
+        "HashSet.java",
+        "Set.java"
+      ]
+    },
+    {
+      "source": "BaseEntity.java",
+      "imports": [
+        "persistence.java",
+        "Getter.java",
+        "Setter.java",
+        "CreationTimestamp.java",
+        "UpdateTimestamp.java",
+        "AuditingEntityListener.java",
+        "LocalDateTime.java"
+      ]
+    },
+    {
+      "source": "Loan.java",
+      "imports": [
+        "persistence.java",
+        "lombok.java",
+        "LocalDate.java"
+      ]
+    },
+    {
+      "source": "Book.java",
+      "imports": [
+        "persistence.java",
+        "lombok.java",
+        "HashSet.java",
+        "Set.java"
+      ]
+    },
+    {
+      "source": "Member.java",
+      "imports": [
+        "persistence.java",
+        "lombok.java",
+        "LocalDate.java",
+        "HashSet.java",
+        "Set.java"
+      ]
+    },
+    {
+      "source": "Fine.java",
+      "imports": [
+        "persistence.java",
+        "lombok.java",
+        "BigDecimal.java",
+        "LocalDate.java"
+      ]
+    },
+    {
+      "source": "BookServiceImpl.java",
+      "imports": [
+        "BookDto.java",
+        "ResourceNotFoundException.java",
+        "BookMapper.java",
+        "model.java",
+        "BookRepository.java",
+        "CategoryRepository.java",
+        "BookService.java",
+        "Transactional.java",
+        "RequiredArgsConstructor.java",
+        "Page.java",
+        "Pageable.java",
+        "Specification.java",
+        "Service.java",
+        "List.java",
+        "Set.java",
+        "Collectors.java"
+      ]
+    },
+    {
+      "source": "CategoryServiceImpl.java",
+      "imports": [
+        "CategoryDto.java",
+        "ResourceNotFoundException.java",
+        "CategoryMapper.java",
+        "Category.java",
+        "CategoryRepository.java",
+        "CategoryService.java",
+        "RequiredArgsConstructor.java",
+        "Page.java",
+        "Pageable.java",
+        "Service.java",
+        "Transactional.java",
+        "List.java",
+        "Collectors.java"
+      ]
+    },
+    {
+      "source": "ReservationServiceImpl.java",
+      "imports": [
+        "ReservationDto.java",
+        "ResourceAlreadyExistsException.java",
+        "ResourceNotFoundException.java",
+        "model.java",
+        "BookRepository.java",
+        "MemberRepository.java",
+        "ReservationRepository.java",
+        "ReservationService.java",
+        "RequiredArgsConstructor.java",
+        "Page.java",
+        "PageImpl.java",
+        "Pageable.java",
+        "Scheduled.java",
+        "Service.java",
+        "Transactional.java",
+        "LocalDateTime.java",
+        "ArrayList.java",
+        "List.java",
+        "Collectors.java"
+      ]
+    },
+    {
+      "source": "FineServiceImpl.java",
+      "imports": [
+        "FineDto.java",
+        "InvalidPaymentException.java",
+        "ResourceNotFoundException.java",
+        "model.java",
+        "FineRepository.java",
+        "LoanRepository.java",
+        "MemberRepository.java",
+        "FineService.java",
+        "RequiredArgsConstructor.java",
+        "Page.java",
+        "Pageable.java",
+        "Scheduled.java",
+        "Service.java",
+        "Transactional.java",
+        "BigDecimal.java",
+        "LocalDate.java",
+        "List.java",
+        "Collectors.java"
+      ]
+    },
+    {
+      "source": "MemberServiceImpl.java",
+      "imports": [
+        "MemberDto.java",
+        "ResourceNotFoundException.java",
+        "MemberMapper.java",
+        "Member.java",
+        "LoanRepository.java",
+        "MemberRepository.java",
+        "MemberService.java",
+        "RequiredArgsConstructor.java",
+        "Page.java",
+        "Pageable.java",
+        "Service.java",
+        "Transactional.java",
+        "List.java",
+        "Collectors.java"
+      ]
+    },
+    {
+      "source": "LoanServiceImpl.java",
+      "imports": [
+        "LoanDto.java",
+        "BookNotAvailableException.java",
+        "InvalidLoanExtensionException.java",
+        "ResourceNotFoundException.java",
+        "model.java",
+        "BookRepository.java",
+        "LoanRepository.java",
+        "MemberRepository.java",
+        "LoanService.java",
+        "RequiredArgsConstructor.java",
+        "Page.java",
+        "Pageable.java",
+        "Specification.java",
+        "Service.java",
+        "Transactional.java",
+        "LocalDate.java",
+        "List.java",
+        "Collectors.java"
+      ]
+    },
+    {
+      "source": "InvalidLoanExtensionException.java",
+      "imports": [
+        "HttpStatus.java",
+        "ResponseStatus.java"
+      ]
+    },
+    {
+      "source": "ResourceNotFoundException.java",
+      "imports": [
+        "HttpStatus.java",
+        "ResponseStatus.java"
+      ]
+    },
+    {
+      "source": "ResourceAlreadyExistsException.java",
+      "imports": [
+        "HttpStatus.java",
+        "ResponseStatus.java"
+      ]
+    },
+    {
+      "source": "GlobalExceptionHandler.java",
+      "imports": [
+        "ConstraintViolationException.java",
+        "HttpHeaders.java",
+        "HttpStatus.java",
+        "ResponseEntity.java",
+        "FieldError.java",
+        "MethodArgumentNotValidException.java",
+        "ControllerAdvice.java",
+        "ExceptionHandler.java",
+        "WebRequest.java",
+        "ResponseEntityExceptionHandler.java",
+        "LocalDateTime.java",
+        "LinkedHashMap.java",
+        "List.java",
+        "Map.java",
+        "Collectors.java"
+      ]
+    },
+    {
+      "source": "InvalidPaymentException.java",
+      "imports": [
+        "HttpStatus.java",
+        "ResponseStatus.java"
+      ]
+    },
+    {
+      "source": "BaseException.java",
+      "imports": [
+        "HttpStatus.java"
+      ]
+    },
+    {
+      "source": "BookNotAvailableException.java",
+      "imports": [
+        "HttpStatus.java",
+        "ResponseStatus.java"
+      ]
+    }
+  ]
+}

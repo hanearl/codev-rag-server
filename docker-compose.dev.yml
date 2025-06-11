@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  vector-db:
+    extends:
+      file: docker-compose.yml
+      service: vector-db
+
+  embedding-server:
+    extends:
+      file: docker-compose.yml
+      service: embedding-server
+    volumes:
+      - ./embedding-server:/app
+      - /app/.venv  # 가상환경 제외
+      - embedding-cache:/app/cache
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+    environment:
+      - MODEL_NAME=sentence-transformers/all-MiniLM-L6-v2
+      - HOST=0.0.0.0
+      - PORT=8001
+      - PYTHONPATH=/app
+
+  llm-server:
+    extends:
+      file: docker-compose.yml
+      service: llm-server
+    volumes:
+      - ./llm-server:/app
+      - /app/.venv
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
+    environment:
+      - MODEL_NAME=gpt-4o-mini
+      - HOST=0.0.0.0
+      - PORT=8002
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - PYTHONPATH=/app
+
+  rag-server:
+    extends:
+      file: docker-compose.yml
+      service: rag-server
+    volumes:
+      - ./rag-server:/app
+      - ./test-codebase:/test-codebase:ro
+      - /app/.venv
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - EMBEDDING_SERVER_URL=http://embedding-server:8001
+      - LLM_SERVER_URL=http://llm-server:8002
+      - VECTOR_DB_URL=http://vector-db:6333
+      - PYTHONPATH=/app
+
+networks:
+  rag-network:
+    driver: bridge
+
+volumes:
+  qdrant-data:
+  embedding-cache: 

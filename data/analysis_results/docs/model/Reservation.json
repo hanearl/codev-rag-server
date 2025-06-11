@@ -1,0 +1,26 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/model/Reservation.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "model",
+  "code": "package com.skax.library.model;\n\nimport jakarta.persistence.*;\nimport lombok.*;\n\nimport java.time.LocalDateTime;\n\n@Entity\n@Table(name = \"reservations\")\n@Getter\n@Setter\n@NoArgsConstructor\n@AllArgsConstructor\n@Builder\npublic class Reservation extends BaseEntity {\n    @ManyToOne(fetch = FetchType.LAZY)\n    @JoinColumn(name = \"book_id\", nullable = false)\n    private Book book;\n\n    @ManyToOne(fetch = FetchType.LAZY)\n    @JoinColumn(name = \"member_id\", nullable = false)\n    private Member member;\n\n    @Column(name = \"reservation_date\", nullable = false)\n    private LocalDateTime reservationDate;\n\n    @Column(name = \"expiry_date\")\n    private LocalDateTime expiryDate;\n\n    @Column(name = \"fulfillment_date\")\n    private LocalDateTime fulfillmentDate;\n\n    @Column(name = \"notification_sent\")\n    @Builder.Default\n    private Boolean notificationSent = false;\n\n    @Enumerated(EnumType.STRING)\n    @Column(nullable = false)\n    @Builder.Default\n    private ReservationStatus status = ReservationStatus.PENDING;\n\n    @OneToOne(mappedBy = \"reservation\")\n    private Loan loan;\n\n    public enum ReservationStatus {\n        PENDING,\n        FULFILLED,\n        EXPIRED,\n        CANCELLED\n    }\n\n    public Boolean isNotificationSent() {\n        return notificationSent;\n    }\n}\n",
+  "classes": [
+    {
+      "name": "Reservation",
+      "methods": [
+        {
+          "name": "isNotificationSent",
+          "returnType": "Boolean",
+          "params": []
+        }
+      ]
+    }
+  ],
+  "references": [
+    "lombok",
+    "Boolean",
+    "java.time.LocalDateTime",
+    "jakarta.persistence"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

@@ -1,0 +1,54 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/mapper/BookMapper.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "mapper",
+  "code": "package com.skax.library.mapper;\n\nimport com.skax.library.dto.BookDto;\nimport com.skax.library.model.Book;\nimport org.springframework.stereotype.Component;\n\nimport java.util.List;\nimport java.util.stream.Collectors;\n\n@Component\npublic class BookMapper {\n\n    public Book toEntity(BookDto dto) {\n        if (dto == null) {\n            return null;\n        }\n\n        Book book = new Book();\n        // Skip id, createdAt, updatedAt, and version as they are managed by JPA\n        book.setTitle(dto.getTitle());\n        book.setDescription(dto.getDescription());\n        book.setIsbn(dto.getIsbn());\n        book.setPublicationYear(dto.getPublicationYear());\n        book.setAuthor(dto.getAuthor());\n        book.setPublisher(dto.getPublisher());\n        book.setTotalCopies(dto.getTotalCopies() != null ? dto.getTotalCopies() : 1);\n        book.setAvailableCopies(dto.getAvailableCopies() != null ? dto.getAvailableCopies() : 1);\n        book.setCoverImageUrl(dto.getCoverImageUrl());\n        book.setStatus(dto.getStatus() != null ? dto.getStatus() : Book.BookStatus.AVAILABLE);\n        \n        return book;\n    }\n\n    public BookDto toDto(Book book) {\n        if (book == null) {\n            return null;\n        }\n\n        BookDto dto = new BookDto();\n        dto.setId(book.getId());\n        dto.setTitle(book.getTitle());\n        dto.setDescription(book.getDescription());\n        dto.setIsbn(book.getIsbn());\n        dto.setPublicationYear(book.getPublicationYear());\n        dto.setAuthor(book.getAuthor());\n        dto.setPublisher(book.getPublisher());\n        dto.setTotalCopies(book.getTotalCopies());\n        dto.setAvailableCopies(book.getAvailableCopies());\n        dto.setCoverImageUrl(book.getCoverImageUrl());\n        dto.setStatus(book.getStatus());\n        dto.setCreatedAt(book.getCreatedAt());\n        dto.setUpdatedAt(book.getUpdatedAt());\n        dto.setCategoryCount(book.getCategories() != null ? (long) book.getCategories().size() : 0L);\n        \n        return dto;\n    }\n\n    public void updateBookFromDto(BookDto dto, Book book) {\n        if (dto == null || book == null) {\n            return;\n        }\n\n        if (dto.getTitle() != null) {\n            book.setTitle(dto.getTitle());\n        }\n        if (dto.getDescription() != null) {\n            book.setDescription(dto.getDescription());\n        }\n        if (dto.getIsbn() != null) {\n            book.setIsbn(dto.getIsbn());\n        }\n        if (dto.getPublicationYear() != null) {\n            book.setPublicationYear(dto.getPublicationYear());\n        }\n        if (dto.getAuthor() != null) {\n            book.setAuthor(dto.getAuthor());\n        }\n        if (dto.getPublisher() != null) {\n            book.setPublisher(dto.getPublisher());\n        }\n        if (dto.getTotalCopies() != null) {\n            book.setTotalCopies(dto.getTotalCopies());\n        }\n        if (dto.getAvailableCopies() != null) {\n            book.setAvailableCopies(dto.getAvailableCopies());\n        }\n        if (dto.getCoverImageUrl() != null) {\n            book.setCoverImageUrl(dto.getCoverImageUrl());\n        }\n        if (dto.getStatus() != null) {\n            book.setStatus(dto.getStatus());\n        }\n    }\n\n    public List<BookDto> toDtoList(List<Book> books) {\n        if (books == null) {\n            return null;\n        }\n        return books.stream()\n                .map(this::toDto)\n                .collect(Collectors.toList());\n    }\n}\n",
+  "classes": [
+    {
+      "name": "BookMapper",
+      "methods": [
+        {
+          "name": "toEntity",
+          "returnType": "Book",
+          "params": [
+            "BookDto dto"
+          ]
+        },
+        {
+          "name": "toDto",
+          "returnType": "BookDto",
+          "params": [
+            "Book book"
+          ]
+        },
+        {
+          "name": "updateBookFromDto",
+          "returnType": "void",
+          "params": [
+            "BookDto dto",
+            "Book book"
+          ]
+        },
+        {
+          "name": "toDtoList",
+          "returnType": "List",
+          "params": [
+            "List books"
+          ]
+        }
+      ]
+    }
+  ],
+  "references": [
+    "Book",
+    "com.skax.library.model.Book",
+    "java.util.List",
+    "org.springframework.stereotype.Component",
+    "com.skax.library.dto.BookDto",
+    "BookDto",
+    "List",
+    "java.util.stream.Collectors"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

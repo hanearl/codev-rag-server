@@ -1,0 +1,39 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/exception/BaseException.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "exception",
+  "code": "package com.skax.library.exception;\n\nimport org.springframework.http.HttpStatus;\n\npublic abstract class BaseException extends RuntimeException {\n    private final HttpStatus status;\n    private final String errorCode;\n\n    protected BaseException(HttpStatus status, String errorCode, String message) {\n        super(message);\n        this.status = status;\n        this.errorCode = errorCode;\n    }\n\n    public HttpStatus getStatus() {\n        return status;\n    }\n\n    public String getErrorCode() {\n        return errorCode;\n    }\n}\n",
+  "classes": [
+    {
+      "name": "BaseException",
+      "methods": [
+        {
+          "name": "BaseException",
+          "returnType": null,
+          "params": [
+            "HttpStatus status",
+            "String errorCode",
+            "String message"
+          ]
+        },
+        {
+          "name": "getStatus",
+          "returnType": "HttpStatus",
+          "params": []
+        },
+        {
+          "name": "getErrorCode",
+          "returnType": "String",
+          "params": []
+        }
+      ]
+    }
+  ],
+  "references": [
+    "HttpStatus",
+    "org.springframework.http.HttpStatus",
+    "String"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

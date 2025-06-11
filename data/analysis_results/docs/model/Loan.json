@@ -1,0 +1,19 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/model/Loan.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "model",
+  "code": "package com.skax.library.model;\n\nimport jakarta.persistence.*;\nimport lombok.*;\n\nimport java.time.LocalDate;\n\n@Entity\n@Table(name = \"loans\")\n@Getter\n@Setter\n@NoArgsConstructor\n@AllArgsConstructor\n@Builder\npublic class Loan extends BaseEntity {\n    @ManyToOne(fetch = FetchType.LAZY)\n    @JoinColumn(name = \"book_id\", nullable = false)\n    private Book book;\n\n    @ManyToOne(fetch = FetchType.LAZY)\n    @JoinColumn(name = \"member_id\", nullable = false)\n    private Member member;\n\n    @Column(name = \"loan_date\", nullable = false)\n    private LocalDate loanDate;\n\n    @Column(name = \"due_date\", nullable = false)\n    private LocalDate dueDate;\n\n    @Column(name = \"return_date\")\n    private LocalDate returnDate;\n\n    @Column(name = \"extended_count\", nullable = false)\n    @Builder.Default\n    private Integer extendedCount = 0;\n\n    @Enumerated(EnumType.STRING)\n    @Column(nullable = false)\n    @Builder.Default\n    private LoanStatus status = LoanStatus.ACTIVE;\n\n    @OneToOne(mappedBy = \"loan\", cascade = CascadeType.ALL, orphanRemoval = true)\n    private Fine fine;\n\n    public enum LoanStatus {\n        ACTIVE,\n        RETURNED,\n        OVERDUE,\n        LOST\n    }\n}\n",
+  "classes": [
+    {
+      "name": "Loan",
+      "methods": []
+    }
+  ],
+  "references": [
+    "lombok",
+    "jakarta.persistence",
+    "java.time.LocalDate"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

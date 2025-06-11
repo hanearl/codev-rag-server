@@ -1,0 +1,79 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/controller/CategoryController.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "controller",
+  "code": "package com.skax.library.controller;\n\nimport com.skax.library.dto.CategoryDto;\nimport com.skax.library.service.CategoryService;\nimport io.swagger.v3.oas.annotations.Operation;\nimport io.swagger.v3.oas.annotations.Parameter;\nimport io.swagger.v3.oas.annotations.tags.Tag;\nimport jakarta.validation.Valid;\nimport lombok.RequiredArgsConstructor;\nimport org.springframework.data.domain.Page;\nimport org.springframework.data.domain.Pageable;\nimport org.springframework.data.web.PageableDefault;\nimport org.springframework.http.HttpStatus;\nimport org.springframework.http.ResponseEntity;\nimport org.springframework.web.bind.annotation.*;\n\nimport java.util.List;\n\n@RestController\n@RequestMapping(\"/api/categories\")\n@Tag(name = \"Category Management\", description = \"APIs for managing book categories\")\n@RequiredArgsConstructor\npublic class CategoryController {\n    private final CategoryService categoryService;\n\n    @PostMapping\n    @Operation(summary = \"Create a new category\")\n    public ResponseEntity<CategoryDto> createCategory(@Valid @RequestBody CategoryDto categoryDto) {\n        CategoryDto createdCategory = categoryService.createCategory(categoryDto);\n        return new ResponseEntity<>(createdCategory, HttpStatus.CREATED);\n    }\n\n    @PutMapping(\"/{id}\")\n    @Operation(summary = \"Update a category by ID\")\n    public ResponseEntity<CategoryDto> updateCategory(\n            @Parameter(description = \"ID of the category to be updated\") \n            @PathVariable Long id,\n            @Valid @RequestBody CategoryDto categoryDto) {\n        CategoryDto updatedCategory = categoryService.updateCategory(id, categoryDto);\n        return ResponseEntity.ok(updatedCategory);\n    }\n\n    @GetMapping(\"/{id}\")\n    @Operation(summary = \"Get a category by ID\")\n    public ResponseEntity<CategoryDto> getCategoryById(\n            @Parameter(description = \"ID of the category to be retrieved\")\n            @PathVariable Long id) {\n        CategoryDto categoryDto = categoryService.getCategoryById(id);\n        return ResponseEntity.ok(categoryDto);\n    }\n\n    @GetMapping\n    @Operation(summary = \"Get all categories with pagination\")\n    public ResponseEntity<Page<CategoryDto>> getAllCategories(\n            @PageableDefault(size = 20) Pageable pageable) {\n        Page<CategoryDto> categories = categoryService.getAllCategories(pageable);\n        return ResponseEntity.ok(categories);\n    }\n\n    @GetMapping(\"/search\")\n    @Operation(summary = \"Search categories by name\")\n    public ResponseEntity<List<CategoryDto>> searchCategories(\n            @Parameter(description = \"Search query for category name\")\n            @RequestParam String query) {\n        List<CategoryDto> categories = categoryService.searchCategories(query);\n        return ResponseEntity.ok(categories);\n    }\n\n    @DeleteMapping(\"/{id}\")\n    @Operation(summary = \"Delete a category by ID\")\n    public ResponseEntity<Void> deleteCategory(\n            @Parameter(description = \"ID of the category to be deleted\")\n            @PathVariable Long id) {\n        categoryService.deleteCategory(id);\n        return ResponseEntity.noContent().build();\n    }\n}\n",
+  "classes": [
+    {
+      "name": "CategoryController",
+      "methods": [
+        {
+          "name": "createCategory",
+          "returnType": "ResponseEntity",
+          "params": [
+            "CategoryDto categoryDto"
+          ]
+        },
+        {
+          "name": "updateCategory",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long id",
+            "CategoryDto categoryDto"
+          ]
+        },
+        {
+          "name": "getCategoryById",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long id"
+          ]
+        },
+        {
+          "name": "getAllCategories",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Pageable pageable"
+          ]
+        },
+        {
+          "name": "searchCategories",
+          "returnType": "ResponseEntity",
+          "params": [
+            "String query"
+          ]
+        },
+        {
+          "name": "deleteCategory",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long id"
+          ]
+        }
+      ]
+    }
+  ],
+  "references": [
+    "java.util.List",
+    "ResponseEntity",
+    "org.springframework.data.web.PageableDefault",
+    "org.springframework.http.ResponseEntity",
+    "io.swagger.v3.oas.annotations.Parameter",
+    "io.swagger.v3.oas.annotations.tags.Tag",
+    "com.skax.library.service.CategoryService",
+    "lombok.RequiredArgsConstructor",
+    "org.springframework.http.HttpStatus",
+    "org.springframework.data.domain.Page",
+    "jakarta.validation.Valid",
+    "org.springframework.web.bind.annotation",
+    "String",
+    "Pageable",
+    "Long",
+    "org.springframework.data.domain.Pageable",
+    "com.skax.library.dto.CategoryDto",
+    "CategoryDto",
+    "io.swagger.v3.oas.annotations.Operation"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

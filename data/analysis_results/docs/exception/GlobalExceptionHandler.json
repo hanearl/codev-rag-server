@@ -1,0 +1,74 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/exception/GlobalExceptionHandler.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "exception",
+  "code": "package com.skax.library.exception;\n\nimport jakarta.validation.ConstraintViolationException;\nimport org.springframework.http.HttpHeaders;\nimport org.springframework.http.HttpStatus;\nimport org.springframework.http.ResponseEntity;\nimport org.springframework.validation.FieldError;\nimport org.springframework.web.bind.MethodArgumentNotValidException;\nimport org.springframework.web.bind.annotation.ControllerAdvice;\nimport org.springframework.web.bind.annotation.ExceptionHandler;\nimport org.springframework.web.context.request.WebRequest;\nimport org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;\n\nimport java.time.LocalDateTime;\nimport java.util.LinkedHashMap;\nimport java.util.List;\nimport java.util.Map;\nimport java.util.stream.Collectors;\n\n@ControllerAdvice\npublic class GlobalExceptionHandler extends ResponseEntityExceptionHandler {\n\n    @ExceptionHandler(BaseException.class)\n    public ResponseEntity<Object> handleBaseException(BaseException ex, WebRequest request) {\n        Map<String, Object> body = new LinkedHashMap<>();\n        body.put(\"timestamp\", LocalDateTime.now());\n        body.put(\"status\", ex.getStatus().value());\n        body.put(\"error\", ex.getStatus().getReasonPhrase());\n        body.put(\"code\", ex.getErrorCode());\n        body.put(\"message\", ex.getMessage());\n        \n        return new ResponseEntity<>(body, ex.getStatus());\n    }\n\n    protected ResponseEntity<Object> handleMethodArgumentNotValid(\n            MethodArgumentNotValidException ex, HttpHeaders headers,\n            HttpStatus status, WebRequest request) {\n        \n        Map<String, Object> body = new LinkedHashMap<>();\n        body.put(\"timestamp\", LocalDateTime.now());\n        body.put(\"status\", status.value());\n        body.put(\"error\", status.getReasonPhrase());\n        \n        // Get all validation errors\n        List<String> errors = ex.getBindingResult()\n                .getFieldErrors()\n                .stream()\n                .map(FieldError::getDefaultMessage)\n                .collect(Collectors.toList());\n        \n        body.put(\"errors\", errors);\n        \n        return new ResponseEntity<>(body, headers, status);\n    }\n\n    @ExceptionHandler(ConstraintViolationException.class)\n    public ResponseEntity<Object> handleConstraintViolation(\n            ConstraintViolationException ex, WebRequest request) {\n        \n        Map<String, Object> body = new LinkedHashMap<>();\n        body.put(\"timestamp\", LocalDateTime.now());\n        body.put(\"status\", HttpStatus.BAD_REQUEST.value());\n        body.put(\"error\", \"Validation failed\");\n        \n        List<String> errors = ex.getConstraintViolations()\n                .stream()\n                .map(violation -> \n                    String.format(\"%s: %s\", \n                        violation.getPropertyPath().toString(),\n                        violation.getMessage()))\n                .collect(Collectors.toList());\n        \n        body.put(\"errors\", errors);\n        \n        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);\n    }\n\n    @ExceptionHandler(Exception.class)\n    public ResponseEntity<Object> handleAllUncaughtException(\n            Exception ex, WebRequest request) {\n        \n        Map<String, Object> body = new LinkedHashMap<>();\n        body.put(\"timestamp\", LocalDateTime.now());\n        body.put(\"status\", HttpStatus.INTERNAL_SERVER_ERROR.value());\n        body.put(\"error\", \"Internal Server Error\");\n        body.put(\"message\", \"An unexpected error occurred\");\n        \n        // In production, you might want to log the exception and return a generic message\n        // Log the exception here\n        \n        return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);\n    }\n}\n",
+  "classes": [
+    {
+      "name": "GlobalExceptionHandler",
+      "methods": [
+        {
+          "name": "handleBaseException",
+          "returnType": "ResponseEntity",
+          "params": [
+            "BaseException ex",
+            "WebRequest request"
+          ]
+        },
+        {
+          "name": "handleMethodArgumentNotValid",
+          "returnType": "ResponseEntity",
+          "params": [
+            "MethodArgumentNotValidException ex",
+            "HttpHeaders headers",
+            "HttpStatus status",
+            "WebRequest request"
+          ]
+        },
+        {
+          "name": "handleConstraintViolation",
+          "returnType": "ResponseEntity",
+          "params": [
+            "ConstraintViolationException ex",
+            "WebRequest request"
+          ]
+        },
+        {
+          "name": "handleAllUncaughtException",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Exception ex",
+            "WebRequest request"
+          ]
+        }
+      ]
+    }
+  ],
+  "references": [
+    "org.springframework.web.bind.annotation.ExceptionHandler",
+    "MethodArgumentNotValidException",
+    "java.util.List",
+    "ResponseEntity",
+    "org.springframework.http.ResponseEntity",
+    "java.util.LinkedHashMap",
+    "org.springframework.validation.FieldError",
+    "jakarta.validation.ConstraintViolationException",
+    "java.time.LocalDateTime",
+    "HttpStatus",
+    "ConstraintViolationException",
+    "org.springframework.web.bind.MethodArgumentNotValidException",
+    "WebRequest",
+    "org.springframework.http.HttpStatus",
+    "HttpHeaders",
+    "java.util.Map",
+    "org.springframework.web.context.request.WebRequest",
+    "BaseException",
+    "org.springframework.http.HttpHeaders",
+    "org.springframework.web.bind.annotation.ControllerAdvice",
+    "Exception",
+    "java.util.stream.Collectors",
+    "org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

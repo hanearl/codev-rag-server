@@ -1,0 +1,20 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/model/Fine.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "model",
+  "code": "package com.skax.library.model;\n\nimport jakarta.persistence.*;\nimport lombok.*;\n\nimport java.math.BigDecimal;\nimport java.time.LocalDate;\n\n@Entity\n@Table(name = \"fines\")\n@Getter\n@Setter\n@NoArgsConstructor\n@AllArgsConstructor\n@Builder\npublic class Fine extends BaseEntity {\n    @OneToOne\n    @JoinColumn(name = \"loan_id\")\n    private Loan loan;\n\n    @ManyToOne(fetch = FetchType.LAZY)\n    @JoinColumn(name = \"member_id\", nullable = false)\n    private Member member;\n\n    @Column(nullable = false)\n    private BigDecimal amount;\n\n    @Column(name = \"fine_date\", nullable = false)\n    private LocalDate fineDate;\n\n    @Column(name = \"due_date\")\n    private LocalDate dueDate;\n\n    @Column(name = \"paid_date\")\n    private LocalDate paidDate;\n\n    @Column(columnDefinition = \"TEXT\")\n    private String reason;\n\n    @Enumerated(EnumType.STRING)\n    @Column(nullable = false)\n    @Builder.Default\n    private FineStatus status = FineStatus.UNPAID;\n\n    @Column(name = \"payment_reference\")\n    private String paymentReference;\n\n    public enum FineStatus {\n        UNPAID,\n        PAID,\n        WAIVED,\n        OVERDUE,\n        PARTIALLY_PAID\n    }\n}\n",
+  "classes": [
+    {
+      "name": "Fine",
+      "methods": []
+    }
+  ],
+  "references": [
+    "java.math.BigDecimal",
+    "lombok",
+    "jakarta.persistence",
+    "java.time.LocalDate"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

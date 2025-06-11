@@ -1,0 +1,27 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/exception/ResourceAlreadyExistsException.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "exception",
+  "code": "package com.skax.library.exception;\n\nimport org.springframework.http.HttpStatus;\nimport org.springframework.web.bind.annotation.ResponseStatus;\n\n@ResponseStatus(HttpStatus.CONFLICT)\npublic class ResourceAlreadyExistsException extends BaseException {\n    public ResourceAlreadyExistsException(String message) {\n        super(HttpStatus.CONFLICT, \"RESOURCE_ALREADY_EXISTS\", message);\n    }\n}\n",
+  "classes": [
+    {
+      "name": "ResourceAlreadyExistsException",
+      "methods": [
+        {
+          "name": "ResourceAlreadyExistsException",
+          "returnType": null,
+          "params": [
+            "String message"
+          ]
+        }
+      ]
+    }
+  ],
+  "references": [
+    "org.springframework.web.bind.annotation.ResponseStatus",
+    "String",
+    "org.springframework.http.HttpStatus"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

@@ -1,0 +1,125 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/controller/BookController.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "controller",
+  "code": "package com.skax.library.controller;\n\nimport com.skax.library.dto.BookDto;\nimport com.skax.library.dto.CategoryDto;\nimport com.skax.library.model.Book;\nimport com.skax.library.service.BookService;\nimport com.skax.library.service.CategoryService;\nimport io.swagger.v3.oas.annotations.Operation;\nimport io.swagger.v3.oas.annotations.Parameter;\nimport io.swagger.v3.oas.annotations.tags.Tag;\nimport jakarta.validation.Valid;\nimport org.springframework.data.domain.Page;\nimport org.springframework.data.domain.Pageable;\nimport org.springframework.data.web.PageableDefault;\nimport org.springframework.http.HttpStatus;\nimport org.springframework.http.ResponseEntity;\nimport org.springframework.web.bind.annotation.*;\n\nimport java.util.List;\n\n@RestController\n@RequestMapping(\"/api/books\")\n@Tag(name = \"Book Management\", description = \"APIs for managing books\")\npublic class BookController {\n    private final BookService bookService;\n    private final CategoryService categoryService;\n\n    public BookController(BookService bookService, CategoryService categoryService) {\n        this.bookService = bookService;\n        this.categoryService = categoryService;\n    }\n\n    @PostMapping\n    @Operation(summary = \"Create a new book\")\n    public ResponseEntity<BookDto> createBook(\n            @Valid @RequestBody BookDto bookDto,\n            @RequestParam(required = false) List<Long> categoryIds) {\n        BookDto createdBook = bookService.createBook(bookDto, categoryIds);\n        return new ResponseEntity<>(createdBook, HttpStatus.CREATED);\n    }\n\n    @PutMapping(\"/{id}\")\n    @Operation(summary = \"Update a book by ID\")\n    public ResponseEntity<BookDto> updateBook(\n            @PathVariable Long id,\n            @Valid @RequestBody BookDto bookDto,\n            @RequestParam(required = false) List<Long> categoryIds) {\n        bookDto.setId(id);\n        BookDto updatedBook = bookService.updateBook(id, bookDto, categoryIds);\n        return ResponseEntity.ok(updatedBook);\n    }\n\n    @GetMapping(\"/{id}\")\n    @Operation(summary = \"Get a book by ID\")\n    public ResponseEntity<BookDto> getBookById(\n            @Parameter(description = \"ID of the book to be retrieved\") \n            @PathVariable Long id) {\n        BookDto bookDto = bookService.getBookById(id);\n        return ResponseEntity.ok(bookDto);\n    }\n\n    @GetMapping\n    @Operation(summary = \"Get all books with pagination\")\n    public ResponseEntity<Page<BookDto>> getAllBooks(\n            @PageableDefault(size = 10) Pageable pageable,\n            @RequestParam(required = false) String search) {\n        Page<BookDto> books;\n        if (search != null && !search.trim().isEmpty()) {\n            books = bookService.searchBooks(search, pageable);\n        } else {\n            books = bookService.getAllBooks(pageable);\n        }\n        return ResponseEntity.ok(books);\n    }\n\n    @GetMapping(\"/available\")\n    @Operation(summary = \"Get all available books\")\n    public ResponseEntity<List<BookDto>> getAvailableBooks() {\n        List<BookDto> books = bookService.getAvailableBooks();\n        return ResponseEntity.ok(books);\n    }\n\n    @DeleteMapping(\"/{id}\")\n    @Operation(summary = \"Delete a book by ID\")\n    public ResponseEntity<Void> deleteBook(\n            @Parameter(description = \"ID of the book to be deleted\") \n            @PathVariable Long id) {\n        bookService.deleteBook(id);\n        return ResponseEntity.noContent().build();\n    }\n\n    @PutMapping(\"/{id}/status\")\n    @Operation(summary = \"Update book status\")\n    public ResponseEntity<BookDto> updateBookStatus(\n            @PathVariable Long id,\n            @RequestParam Book.BookStatus status) {\n        BookDto updatedBook = bookService.updateBookStatus(id, status);\n        return ResponseEntity.ok(updatedBook);\n    }\n\n    @PostMapping(\"/{bookId}/categories\")\n    @Operation(summary = \"Add categories to a book\")\n    public ResponseEntity<BookDto> addCategoriesToBook(\n            @PathVariable Long bookId,\n            @RequestParam List<Long> categoryIds) {\n        BookDto updatedBook = bookService.addCategoriesToBook(bookId, categoryIds);\n        return ResponseEntity.ok(updatedBook);\n    }\n\n    @DeleteMapping(\"/{bookId}/categories/{categoryId}\")\n    @Operation(summary = \"Remove a category from a book\")\n    public ResponseEntity<BookDto> removeCategoryFromBook(\n            @PathVariable Long bookId,\n            @PathVariable Long categoryId) {\n        BookDto updatedBook = bookService.removeCategoryFromBook(bookId, categoryId);\n        return ResponseEntity.ok(updatedBook);\n    }\n\n    @GetMapping(\"/{bookId}/categories\")\n    @Operation(summary = \"Get all categories for a book\")\n    public ResponseEntity<List<CategoryDto>> getBookCategories(@PathVariable Long bookId) {\n        List<CategoryDto> categories = categoryService.getCategoriesByBookId(bookId);\n        return ResponseEntity.ok(categories);\n    }\n}\n",
+  "classes": [
+    {
+      "name": "BookController",
+      "methods": [
+        {
+          "name": "BookController",
+          "returnType": null,
+          "params": [
+            "BookService bookService",
+            "CategoryService categoryService"
+          ]
+        },
+        {
+          "name": "createBook",
+          "returnType": "ResponseEntity",
+          "params": [
+            "BookDto bookDto",
+            "List categoryIds"
+          ]
+        },
+        {
+          "name": "updateBook",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long id",
+            "BookDto bookDto",
+            "List categoryIds"
+          ]
+        },
+        {
+          "name": "getBookById",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long id"
+          ]
+        },
+        {
+          "name": "getAllBooks",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Pageable pageable",
+            "String search"
+          ]
+        },
+        {
+          "name": "getAvailableBooks",
+          "returnType": "ResponseEntity",
+          "params": []
+        },
+        {
+          "name": "deleteBook",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long id"
+          ]
+        },
+        {
+          "name": "updateBookStatus",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long id",
+            "Book status"
+          ]
+        },
+        {
+          "name": "addCategoriesToBook",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long bookId",
+            "List categoryIds"
+          ]
+        },
+        {
+          "name": "removeCategoryFromBook",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long bookId",
+            "Long categoryId"
+          ]
+        },
+        {
+          "name": "getBookCategories",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long bookId"
+          ]
+        }
+      ]
+    }
+  ],
+  "references": [
+    "com.skax.library.model.Book",
+    "java.util.List",
+    "ResponseEntity",
+    "org.springframework.data.web.PageableDefault",
+    "org.springframework.http.ResponseEntity",
+    "io.swagger.v3.oas.annotations.Parameter",
+    "Book",
+    "io.swagger.v3.oas.annotations.tags.Tag",
+    "com.skax.library.service.CategoryService",
+    "com.skax.library.dto.BookDto",
+    "org.springframework.http.HttpStatus",
+    "List",
+    "com.skax.library.service.BookService",
+    "org.springframework.data.domain.Page",
+    "jakarta.validation.Valid",
+    "org.springframework.web.bind.annotation",
+    "String",
+    "CategoryService",
+    "Pageable",
+    "Long",
+    "org.springframework.data.domain.Pageable",
+    "com.skax.library.dto.CategoryDto",
+    "BookDto",
+    "BookService",
+    "io.swagger.v3.oas.annotations.Operation"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

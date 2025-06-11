@@ -1,0 +1,30 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/LibraryManagementApplication.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "library",
+  "code": "package com.skax.library;\n\nimport io.swagger.v3.oas.annotations.OpenAPIDefinition;\nimport io.swagger.v3.oas.annotations.info.Info;\nimport org.springframework.boot.SpringApplication;\nimport org.springframework.boot.autoconfigure.SpringBootApplication;\nimport org.springframework.scheduling.annotation.EnableScheduling;\n\n@SpringBootApplication\n@EnableScheduling\n@OpenAPIDefinition(\n    info = @Info(\n        title = \"Library Management System API\",\n        version = \"1.0\",\n        description = \"API documentation for Library Management System\"\n    )\n)\npublic class LibraryManagementApplication {\n    public static void main(String[] args) {\n        SpringApplication.run(LibraryManagementApplication.class, args);\n    }\n}\n",
+  "classes": [
+    {
+      "name": "LibraryManagementApplication",
+      "methods": [
+        {
+          "name": "main",
+          "returnType": "void",
+          "params": [
+            "String args"
+          ]
+        }
+      ]
+    }
+  ],
+  "references": [
+    "String",
+    "org.springframework.scheduling.annotation.EnableScheduling",
+    "io.swagger.v3.oas.annotations.info.Info",
+    "org.springframework.boot.autoconfigure.SpringBootApplication",
+    "org.springframework.boot.SpringApplication",
+    "io.swagger.v3.oas.annotations.OpenAPIDefinition"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

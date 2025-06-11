@@ -1,0 +1,27 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/springbootsamplepjt/SpringbootSamplePjtApplication.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "springbootsamplepjt",
+  "code": "package com.skax.springbootsamplepjt;\n\nimport org.springframework.boot.SpringApplication;\nimport org.springframework.boot.autoconfigure.SpringBootApplication;\n\n@SpringBootApplication\npublic class SpringbootSamplePjtApplication {\n\n    public static void main(String[] args) {\n        SpringApplication.run(SpringbootSamplePjtApplication.class, args);\n    }\n\n}\n",
+  "classes": [
+    {
+      "name": "SpringbootSamplePjtApplication",
+      "methods": [
+        {
+          "name": "main",
+          "returnType": "void",
+          "params": [
+            "String args"
+          ]
+        }
+      ]
+    }
+  ],
+  "references": [
+    "String",
+    "org.springframework.boot.SpringApplication",
+    "org.springframework.boot.autoconfigure.SpringBootApplication"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

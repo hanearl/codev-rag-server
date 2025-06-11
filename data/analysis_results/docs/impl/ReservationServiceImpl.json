@@ -1,0 +1,194 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/service/impl/ReservationServiceImpl.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "impl",
+  "code": "package com.skax.library.service.impl;\n\nimport com.skax.library.dto.ReservationDto;\nimport com.skax.library.exception.ResourceAlreadyExistsException;\nimport com.skax.library.exception.ResourceNotFoundException;\nimport com.skax.library.model.*;\nimport com.skax.library.repository.BookRepository;\nimport com.skax.library.repository.MemberRepository;\nimport com.skax.library.repository.ReservationRepository;\nimport com.skax.library.service.ReservationService;\nimport lombok.RequiredArgsConstructor;\nimport org.springframework.data.domain.Page;\nimport org.springframework.data.domain.PageImpl;\nimport org.springframework.data.domain.Pageable;\nimport org.springframework.scheduling.annotation.Scheduled;\nimport org.springframework.stereotype.Service;\nimport org.springframework.transaction.annotation.Transactional;\n\nimport java.time.LocalDateTime;\nimport java.util.ArrayList;\nimport java.util.List;\nimport java.util.stream.Collectors;\n\n@Service\n@RequiredArgsConstructor\npublic class ReservationServiceImpl implements ReservationService {\n    private static final int RESERVATION_EXPIRY_DAYS = 7;\n    \n    private final ReservationRepository reservationRepository;\n    private final BookRepository bookRepository;\n    private final MemberRepository memberRepository;\n\n    @Override\n    @Transactional\n    public ReservationDto createReservation(ReservationDto reservationDto) {\n        Book book = bookRepository.findById(reservationDto.getBookId())\n                .orElseThrow(() -> new ResourceNotFoundException(\"Book not found with id: \" + reservationDto.getBookId()));\n                \n        Member member = memberRepository.findById(reservationDto.getMemberId())\n                .orElseThrow(() -> new ResourceNotFoundException(\"Member not found with id: \" + reservationDto.getMemberId()));\n        \n        // Check if book is already reserved by this member\n        if (reservationRepository.existsByBookIdAndMemberIdAndStatus(book.getId(), member.getId(), \n                Reservation.ReservationStatus.PENDING)) {\n            throw new ResourceAlreadyExistsException(\"You have already reserved this book\");\n        }\n        \n        Reservation reservation = reservationDto.toEntity();\n        reservation.setBook(book);\n        reservation.setMember(member);\n        \n        if (reservation.getReservationDate() == null) {\n            reservation.setReservationDate(LocalDateTime.now());\n        }\n        \n        if (reservation.getExpiryDate() == null) {\n            reservation.setExpiryDate(LocalDateTime.now().plusDays(RESERVATION_EXPIRY_DAYS));\n        }\n        \n        return ReservationDto.fromEntity(reservationRepository.save(reservation));\n    }\n\n    @Override\n    @Transactional\n    public ReservationDto reserveBook(Long bookId, Long memberId) {\n        Book book = bookRepository.findById(bookId)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Book not found with id: \" + bookId));\n                \n        Member member = memberRepository.findById(memberId)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Member not found with id: \" + memberId));\n        \n        // Check if book is already reserved by this member\n        if (reservationRepository.existsByBookIdAndMemberIdAndStatus(bookId, memberId, \n                Reservation.ReservationStatus.PENDING)) {\n            throw new ResourceAlreadyExistsException(\"You have already reserved this book\");\n        }\n        \n        // Check if book is available for reservation\n        if (book.getAvailableCopies() > 0) {\n            throw new IllegalStateException(\"Book is available for immediate checkout\");\n        }\n        \n        Reservation reservation = Reservation.builder()\n                .book(book)\n                .member(member)\n                .reservationDate(LocalDateTime.now())\n                .expiryDate(LocalDateTime.now().plusDays(RESERVATION_EXPIRY_DAYS))\n                .status(Reservation.ReservationStatus.PENDING)\n                .notificationSent(false)\n                .build();\n        \n        return ReservationDto.fromEntity(reservationRepository.save(reservation));\n    }\n\n    @Override\n    @Transactional\n    public ReservationDto cancelReservation(Long reservationId) {\n        Reservation reservation = findReservationById(reservationId);\n        \n        if (reservation.getStatus() != Reservation.ReservationStatus.PENDING) {\n            throw new IllegalStateException(\"Only pending reservations can be cancelled\");\n        }\n        \n        reservation.setStatus(Reservation.ReservationStatus.CANCELLED);\n        Reservation savedReservation = reservationRepository.save(reservation);\n        \n        // Notify next in line if any\n        notifyNextInLine(reservation.getBook().getId());\n        \n        return ReservationDto.fromEntity(savedReservation);\n    }\n\n    @Override\n    public ReservationDto getReservationById(Long id) {\n        return ReservationDto.fromEntity(findReservationById(id));\n    }\n    \n    private Reservation findReservationById(Long id) {\n        return reservationRepository.findById(id)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Reservation not found with id: \" + id));\n    }\n\n    @Override\n    public List<ReservationDto> getReservationsByMemberId(Long memberId) {\n        memberRepository.findById(memberId)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Member not found with id: \" + memberId));\n        return reservationRepository.findByMemberId(memberId).stream()\n                .map(ReservationDto::fromEntity)\n                .collect(Collectors.toList());\n    }\n\n    @Override\n    public Page<ReservationDto> getReservationsByMemberId(Long memberId, Pageable pageable) {\n        memberRepository.findById(memberId)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Member not found with id: \" + memberId));\n        // 페이징 구현 - 실제로는 Repository에서 PageRequest를 받는 메서드가 구현되어야 함\n        // 임시 구현으로 Page.empty() 반환\n        return Page.empty();\n    }\n\n    @Override\n    public List<ReservationDto> getReservationsByBookId(Long bookId) {\n        bookRepository.findById(bookId)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Book not found with id: \" + bookId));\n        return reservationRepository.findByBookId(bookId).stream()\n                .map(ReservationDto::fromEntity)\n                .collect(Collectors.toList());\n    }\n    \n    @Override\n    public Page<ReservationDto> getReservationsByBookId(Long bookId, Pageable pageable) {\n        bookRepository.findById(bookId)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Book not found with id: \" + bookId));\n        // 페이징 구현 - 실제로는 Repository에서 PageRequest를 받는 메서드가 구현되어야 함\n        // 임시 구현으로 Page.empty() 반환\n        return Page.empty();\n    }\n\n    @Override\n    public List<ReservationDto> getPendingReservationsForBook(Long bookId) {\n        return reservationRepository.findPendingReservationsForBook(bookId).stream()\n                .map(ReservationDto::fromEntity)\n                .collect(Collectors.toList());\n    }\n\n    @Override\n    @Transactional\n    public ReservationDto fulfillReservation(Long reservationId, Long loanId) {\n        Reservation reservation = findReservationById(reservationId);\n        \n        if (reservation.getStatus() != Reservation.ReservationStatus.PENDING) {\n            throw new IllegalStateException(\"Only pending reservations can be fulfilled\");\n        }\n        \n        reservation.setStatus(Reservation.ReservationStatus.FULFILLED);\n        reservation.setFulfillmentDate(LocalDateTime.now());\n        return ReservationDto.fromEntity(reservationRepository.save(reservation));\n    }\n\n    @Override\n    @Scheduled(cron = \"0 0 0 * * ?\") // Run daily at midnight\n    @Transactional\n    public void processExpiredReservations() {\n        LocalDateTime now = LocalDateTime.now();\n        List<Reservation> expiredReservations = reservationRepository.findExpiredReservations(now);\n        \n        for (Reservation reservation : expiredReservations) {\n            reservation.setStatus(Reservation.ReservationStatus.EXPIRED);\n            reservationRepository.save(reservation);\n            \n            // Notify next in line\n            notifyNextInLine(reservation.getBook().getId());\n        }\n    }\n\n    @Override\n    public boolean hasMemberReservedBook(Long memberId, Long bookId) {\n        return reservationRepository.findPendingReservationByBookAndMember(bookId, memberId).isPresent();\n    }\n\n    @Override\n    public int getReservationQueuePosition(Long reservationId) {\n        Reservation reservation = findReservationById(reservationId);\n        \n        if (reservation.getStatus() != Reservation.ReservationStatus.PENDING) {\n            return -1; // Not in queue\n        }\n        \n        List<Reservation> pendingReservations = reservationRepository\n                .findPendingReservationsForBook(reservation.getBook().getId());\n        \n        for (int i = 0; i < pendingReservations.size(); i++) {\n            if (pendingReservations.get(i).getId().equals(reservationId)) {\n                return i + 1; // 1-based position\n            }\n        }\n        \n        return -1; // Not found in queue (shouldn't happen)\n    }\n    \n    private void notifyNextInLine(Long bookId) {\n        List<Reservation> pendingReservations = reservationRepository.findPendingReservationsForBook(bookId);\n        if (!pendingReservations.isEmpty()) {\n            Reservation nextReservation = pendingReservations.get(0);\n            if (!nextReservation.isNotificationSent()) {\n                // In a real application, send notification to the member\n                nextReservation.setNotificationSent(true);\n                reservationRepository.save(nextReservation);\n            }\n        }\n    }\n    \n    @Override\n    public Page<ReservationDto> getAllReservations(Pageable pageable) {\n        // 페이징 구현 - 실제로는 Repository에서 PageRequest를 받는 메서드가 구현되어야 함\n        // 임시 구현으로 Page.empty() 반환\n        return Page.empty();\n    }\n    \n    @Override\n    public Page<ReservationDto> getReservationsByStatus(String status, Pageable pageable) {\n        Reservation.ReservationStatus reservationStatus = Reservation.ReservationStatus.valueOf(status.toUpperCase());\n        // 페이징 구현 - 실제로는 Repository에서 PageRequest를 받는 메서드가 구현되어야 함\n        // 임시 구현으로 Page.empty() 반환\n        return Page.empty();\n    }\n    \n    @Override\n    public List<ReservationDto> getActiveReservations() {\n        return reservationRepository.findAllPendingReservations().stream()\n                .map(ReservationDto::fromEntity)\n                .collect(Collectors.toList());\n    }\n    \n    @Override\n    public List<ReservationDto> getReservationQueue(Long bookId) {\n        return getPendingReservationsForBook(bookId);\n    }\n    \n    @Override\n    public List<ReservationDto> getActiveReservationsByMemberId(Long memberId) {\n        return reservationRepository.findActiveReservationsByMemberId(memberId).stream()\n                .map(ReservationDto::fromEntity)\n                .collect(Collectors.toList());\n    }\n    \n    @Override\n    public ReservationDto markNotificationAsSent(Long reservationId) {\n        Reservation reservation = findReservationById(reservationId);\n        reservation.setNotificationSent(true);\n        return ReservationDto.fromEntity(reservationRepository.save(reservation));\n    }\n}\n",
+  "classes": [
+    {
+      "name": "ReservationServiceImpl",
+      "methods": [
+        {
+          "name": "createReservation",
+          "returnType": "ReservationDto",
+          "params": [
+            "ReservationDto reservationDto"
+          ]
+        },
+        {
+          "name": "reserveBook",
+          "returnType": "ReservationDto",
+          "params": [
+            "Long bookId",
+            "Long memberId"
+          ]
+        },
+        {
+          "name": "cancelReservation",
+          "returnType": "ReservationDto",
+          "params": [
+            "Long reservationId"
+          ]
+        },
+        {
+          "name": "getReservationById",
+          "returnType": "ReservationDto",
+          "params": [
+            "Long id"
+          ]
+        },
+        {
+          "name": "findReservationById",
+          "returnType": "Reservation",
+          "params": [
+            "Long id"
+          ]
+        },
+        {
+          "name": "getReservationsByMemberId",
+          "returnType": "List",
+          "params": [
+            "Long memberId"
+          ]
+        },
+        {
+          "name": "getReservationsByMemberId",
+          "returnType": "Page",
+          "params": [
+            "Long memberId",
+            "Pageable pageable"
+          ]
+        },
+        {
+          "name": "getReservationsByBookId",
+          "returnType": "List",
+          "params": [
+            "Long bookId"
+          ]
+        },
+        {
+          "name": "getReservationsByBookId",
+          "returnType": "Page",
+          "params": [
+            "Long bookId",
+            "Pageable pageable"
+          ]
+        },
+        {
+          "name": "getPendingReservationsForBook",
+          "returnType": "List",
+          "params": [
+            "Long bookId"
+          ]
+        },
+        {
+          "name": "fulfillReservation",
+          "returnType": "ReservationDto",
+          "params": [
+            "Long reservationId",
+            "Long loanId"
+          ]
+        },
+        {
+          "name": "processExpiredReservations",
+          "returnType": "void",
+          "params": []
+        },
+        {
+          "name": "hasMemberReservedBook",
+          "returnType": "boolean",
+          "params": [
+            "Long memberId",
+            "Long bookId"
+          ]
+        },
+        {
+          "name": "getReservationQueuePosition",
+          "returnType": "int",
+          "params": [
+            "Long reservationId"
+          ]
+        },
+        {
+          "name": "notifyNextInLine",
+          "returnType": "void",
+          "params": [
+            "Long bookId"
+          ]
+        },
+        {
+          "name": "getAllReservations",
+          "returnType": "Page",
+          "params": [
+            "Pageable pageable"
+          ]
+        },
+        {
+          "name": "getReservationsByStatus",
+          "returnType": "Page",
+          "params": [
+            "String status",
+            "Pageable pageable"
+          ]
+        },
+        {
+          "name": "getActiveReservations",
+          "returnType": "List",
+          "params": []
+        },
+        {
+          "name": "getReservationQueue",
+          "returnType": "List",
+          "params": [
+            "Long bookId"
+          ]
+        },
+        {
+          "name": "getActiveReservationsByMemberId",
+          "returnType": "List",
+          "params": [
+            "Long memberId"
+          ]
+        },
+        {
+          "name": "markNotificationAsSent",
+          "returnType": "ReservationDto",
+          "params": [
+            "Long reservationId"
+          ]
+        }
+      ]
+    }
+  ],
+  "references": [
+    "com.skax.library.dto.ReservationDto",
+    "java.util.List",
+    "com.skax.library.repository.MemberRepository",
+    "org.springframework.scheduling.annotation.Scheduled",
+    "org.springframework.data.domain.PageImpl",
+    "ReservationDto",
+    "java.util.ArrayList",
+    "com.skax.library.service.ReservationService",
+    "int",
+    "com.skax.library.repository.BookRepository",
+    "java.time.LocalDateTime",
+    "com.skax.library.exception.ResourceAlreadyExistsException",
+    "lombok.RequiredArgsConstructor",
+    "org.springframework.stereotype.Service",
+    "List",
+    "com.skax.library.repository.ReservationRepository",
+    "Reservation",
+    "com.skax.library.exception.ResourceNotFoundException",
+    "org.springframework.data.domain.Page",
+    "String",
+    "boolean",
+    "Pageable",
+    "org.springframework.transaction.annotation.Transactional",
+    "Page",
+    "Long",
+    "org.springframework.data.domain.Pageable",
+    "com.skax.library.model",
+    "java.util.stream.Collectors"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

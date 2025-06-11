@@ -1,0 +1,36 @@
+{
+  "collection_name": "code_embeddings",
+  "vector_config": {
+    "size": 384,
+    "distance": "Cosine"
+  },
+  "payload_schema": {
+    "file_path": "str",
+    "function_name": "str",
+    "code_type": "str",
+    "language": "str",
+    "code_content": "str",
+    "line_start": "int",
+    "line_end": "int",
+    "created_at": "str",
+    "keywords": ["str"]
+  },
+  "indexes": [
+    {
+      "field_name": "file_path",
+      "field_schema": "keyword"
+    },
+    {
+      "field_name": "language",
+      "field_schema": "keyword"
+    },
+    {
+      "field_name": "code_type",
+      "field_schema": "keyword"
+    },
+    {
+      "field_name": "function_name",
+      "field_schema": "keyword"
+    }
+  ]
+} 

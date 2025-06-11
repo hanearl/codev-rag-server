@@ -1,0 +1,39 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/dto/BookDto.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "dto",
+  "code": "package com.skax.library.dto;\n\nimport com.skax.library.model.Book;\nimport jakarta.validation.constraints.NotBlank;\nimport jakarta.validation.constraints.NotNull;\nimport jakarta.validation.constraints.PositiveOrZero;\nimport lombok.Getter;\nimport lombok.Setter;\n\nimport java.util.HashSet;\nimport java.util.Set;\n\n@Getter\n@Setter\npublic class BookDto extends BaseDto {\n    @NotBlank(message = \"Title is required\")\n    private String title;\n    \n    private String description;\n    \n    @NotBlank(message = \"ISBN is required\")\n    private String isbn;\n    \n    private Integer publicationYear;\n    \n    @NotBlank(message = \"Author is required\")\n    private String author;\n    \n    private String publisher;\n    \n    @NotNull(message = \"Total copies is required\")\n    @PositiveOrZero(message = \"Total copies must be zero or positive\")\n    private Integer totalCopies;\n    \n    private Integer availableCopies;\n    \n    private String coverImageUrl;\n    \n    private Book.BookStatus status;\n    \n    private Set<CategoryDto> categories = new HashSet<>();\n    \n    // For responses\n    private Long categoryCount;\n    \n    public static BookDto fromEntity(Book book) {\n        if (book == null) {\n            return null;\n        }\n        \n        BookDto dto = new BookDto();\n        dto.setId(book.getId());\n        dto.setTitle(book.getTitle());\n        dto.setDescription(book.getDescription());\n        dto.setIsbn(book.getIsbn());\n        dto.setPublicationYear(book.getPublicationYear());\n        dto.setAuthor(book.getAuthor());\n        dto.setPublisher(book.getPublisher());\n        dto.setTotalCopies(book.getTotalCopies());\n        dto.setAvailableCopies(book.getAvailableCopies());\n        dto.setCoverImageUrl(book.getCoverImageUrl());\n        dto.setStatus(book.getStatus());\n        dto.setCreatedAt(book.getCreatedAt());\n        dto.setUpdatedAt(book.getUpdatedAt());\n        \n        if (book.getCategories() != null) {\n            book.getCategories().forEach(bookCategory -> \n                dto.getCategories().add(CategoryDto.fromEntity(bookCategory.getCategory()))\n            );\n            dto.setCategoryCount((long) book.getCategories().size());\n        }\n        \n        return dto;\n    }\n    \n    public Book toEntity() {\n        Book book = new Book();\n        book.setTitle(this.title);\n        book.setDescription(this.description);\n        book.setIsbn(this.isbn);\n        book.setPublicationYear(this.publicationYear);\n        book.setAuthor(this.author);\n        book.setPublisher(this.publisher);\n        book.setTotalCopies(this.totalCopies != null ? this.totalCopies : 1);\n        book.setAvailableCopies(this.availableCopies != null ? this.availableCopies : book.getTotalCopies());\n        book.setCoverImageUrl(this.coverImageUrl);\n        book.setStatus(this.status != null ? this.status : Book.BookStatus.AVAILABLE);\n        \n        return book;\n    }\n}\n",
+  "classes": [
+    {
+      "name": "BookDto",
+      "methods": [
+        {
+          "name": "fromEntity",
+          "returnType": "BookDto",
+          "params": [
+            "Book book"
+          ]
+        },
+        {
+          "name": "toEntity",
+          "returnType": "Book",
+          "params": []
+        }
+      ]
+    }
+  ],
+  "references": [
+    "Book",
+    "com.skax.library.model.Book",
+    "lombok.Getter",
+    "jakarta.validation.constraints.PositiveOrZero",
+    "jakarta.validation.constraints.NotNull",
+    "lombok.Setter",
+    "java.util.HashSet",
+    "BookDto",
+    "java.util.Set",
+    "jakarta.validation.constraints.NotBlank"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

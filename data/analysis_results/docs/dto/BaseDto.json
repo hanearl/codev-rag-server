@@ -1,0 +1,20 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/dto/BaseDto.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "dto",
+  "code": "package com.skax.library.dto;\n\nimport com.fasterxml.jackson.annotation.JsonFormat;\nimport lombok.Getter;\nimport lombok.Setter;\n\nimport java.time.LocalDateTime;\n\n@Getter\n@Setter\npublic abstract class BaseDto {\n    private Long id;\n    \n    @JsonFormat(pattern = \"yyyy-MM-dd HH:mm:ss\")\n    private LocalDateTime createdAt;\n    \n    @JsonFormat(pattern = \"yyyy-MM-dd HH:mm:ss\")\n    private LocalDateTime updatedAt;\n}\n",
+  "classes": [
+    {
+      "name": "BaseDto",
+      "methods": []
+    }
+  ],
+  "references": [
+    "lombok.Getter",
+    "lombok.Setter",
+    "java.time.LocalDateTime",
+    "com.fasterxml.jackson.annotation.JsonFormat"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

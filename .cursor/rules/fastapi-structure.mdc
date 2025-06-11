@@ -1,0 +1,145 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# FastAPI 프로젝트 구조 가이드
+
+## 🎯 프로젝트 개요
+Python FastAPI 기반 백엔드 프로젝트에서 기능 단위 디렉토리 구조를 유지하고, 일관성 있는 개발 문화를 정착시키기 위한 규칙들입니다.
+
+## 📦 기본 디렉토리 구조
+
+```
+app/
+├── features/             ← 모든 비즈니스 기능을 포함하는 패키지
+│   ├── <feature>/        ← 도메인 또는 기능명 (예: users, items)
+│   │   ├── router.py     ← API 라우터
+│   │   ├── service.py    ← 비즈니스 로직
+│   │   ├── schema.py     ← 요청/응답 Pydantic 스키마
+│   │   ├── model.py      ← ORM 모델
+│   │   ├── repository.py ← DB 접근 로직
+│   │   └── __init__.py
+│   └── __init__.py       ← Features 패키지 초기화
+├── core/                 ← 설정, 보안, 의존성 주입
+├── db/                   ← DB 초기화 및 session
+└── main.py               ← FastAPI app entrypoint
+```
+
+## 🛠 파일별 구조 규칙
+
+### Router 파일 (`app/features/**/router.py`)
+- **필수 포함**: FastAPI APIRouter 인스턴스
+- **표준 구조**:
+```python
+from fastapi import APIRouter
+
+router = APIRouter()
+
+@router.get("/endpoint")
+def endpoint_function():
+    pass
+```
+
+### Service 파일 (`app/features/**/service.py`)
+- **역할**: 비즈니스 로직 처리
+- **필수 포함**: 하나 이상의 서비스 함수 또는 클래스
+- **표준 구조**:
+```python
+def get_service_function():
+    pass
+
+class ServiceClass:
+    pass
+```
+
+### Schema 파일 (`app/features/**/schema.py`)
+- **역할**: 요청/응답 데이터 검증
+- **필수 포함**: Pydantic BaseModel
+- **표준 구조**:
+```python
+from pydantic import BaseModel
+
+class RequestSchema(BaseModel):
+    pass
+
+class ResponseSchema(BaseModel):
+    pass
+```
+
+### Model 파일 (`app/features/**/model.py`)
+- **역할**: 데이터베이스 ORM 모델 정의
+- **필수 포함**: SQLAlchemy 모델과 Base
+- **표준 구조**:
+```python
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
+
+class ModelClass(Base):
+    __tablename__ = "table_name"
+    pass
+```
+
+### Repository 파일 (`app/features/**/repository.py`)
+- **역할**: 데이터베이스 접근 로직
+- **필수 포함**: CRUD 작업 함수
+- **표준 구조**:
+```python
+def get_item():
+    pass
+
+def create_item():
+    pass
+```
+
+### Main 파일 (`app/main.py`)
+- **역할**: FastAPI 애플리케이션 진입점
+- **필수 포함**: FastAPI 인스턴스와 라우터 등록
+- **표준 구조**:
+```python
+from fastapi import FastAPI
+
+app = FastAPI()
+
+app.include_router(router)
+```
+
+## ✅ 개발 규칙
+
+### 1. Features 구조 규칙
+- 모든 비즈니스 기능은 `app/features/` 디렉토리 하위에 위치
+- 각 기능별 디렉토리는 다음 파일들을 포함해야 합니다:
+  - `router.py`
+  - `service.py`
+  - `schema.py`
+  - `model.py`
+  - `repository.py`
+  - `__init__.py`
+
+### 2. 네이밍 컨벤션
+- Features 디렉토리명: 소문자, 언더스코어 사용 (예: `user_management`)
+- 파일명: 표준 파일명 사용 (`router.py`, `service.py` 등)
+- 클래스명: PascalCase (예: `UserService`)
+- 함수명: snake_case (예: `get_user_by_id`)
+- Import 경로: `from app.features.users.service import UserService`
+
+### 3. 의존성 주입 패턴
+- `core/` 디렉토리에서 의존성 관리
+- 각 레이어 간 의존성은 명확히 분리
+- 데이터베이스 세션은 의존성 주입으로 관리
+
+### 4. 오류 처리
+- 각 레이어에서 적절한 예외 처리
+- HTTP 상태 코드와 일관성 있는 오류 응답
+- 로깅 시스템 활용
+
+## 💡 개발 팁
+
+1. **템플릿 활용**: 새로운 기능 추가 시 기존 구조를 참고하여 일관성 유지
+2. **의존성 분리**: 각 파일의 역할을 명확히 분리하여 테스트 가능한 코드 작성
+3. **문서화**: API 문서 자동 생성을 위한 docstring 작성
+4. **타입 힌트**: Python 타입 힌트를 활용하여 코드의 가독성과 안정성 향상
+
+이 규칙들을 따르면 팀 전체가 일관성 있는 코드 구조를 유지할 수 있으며, 프로젝트의 확장성과 유지보수성을 크게 향상시킬 수 있습니다.

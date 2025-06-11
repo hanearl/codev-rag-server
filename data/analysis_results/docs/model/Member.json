@@ -1,0 +1,28 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/model/Member.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "model",
+  "code": "package com.skax.library.model;\n\nimport jakarta.persistence.*;\nimport lombok.*;\n\nimport java.time.LocalDate;\nimport java.util.HashSet;\nimport java.util.Set;\n\n@Entity\n@Table(name = \"members\")\n@Getter\n@Setter\n@NoArgsConstructor\n@AllArgsConstructor\n@Builder\npublic class Member extends BaseEntity {\n    @Column(nullable = false)\n    private String firstName;\n\n    @Column(nullable = false)\n    private String lastName;\n\n\n    @Column(nullable = false, unique = true)\n    private String email;\n\n    @Column(unique = true)\n    private String phoneNumber;\n\n\n    @Column(nullable = false)\n    private String address;\n\n    @Column(name = \"date_of_birth\")\n    private LocalDate dateOfBirth;\n\n    @Column(name = \"membership_start_date\", nullable = false)\n    private LocalDate membershipStartDate;\n\n    @Column(name = \"membership_end_date\")\n    private LocalDate membershipEndDate;\n\n    @Enumerated(EnumType.STRING)\n    @Column(nullable = false)\n    @Builder.Default\n    private MemberStatus status = MemberStatus.ACTIVE;\n\n    @Column(name = \"max_books_allowed\", nullable = false)\n    @Builder.Default\n    private Integer maxBooksAllowed = 5;\n\n    @OneToMany(mappedBy = \"member\")\n    @Builder.Default\n    private Set<Loan> loans = new HashSet<>();\n\n    @OneToMany(mappedBy = \"member\")\n    @Builder.Default\n    private Set<Reservation> reservations = new HashSet<>();\n\n    @OneToMany(mappedBy = \"member\")\n    @Builder.Default\n    private Set<Fine> fines = new HashSet<>();\n\n    public enum MemberStatus {\n        ACTIVE,\n        INACTIVE,\n        SUSPENDED,\n        BLACKLISTED,\n        ALUMNI\n    }\n\n    public String getFullName() {\n        return String.format(\"%s %s\", firstName, lastName);\n    }\n}\n",
+  "classes": [
+    {
+      "name": "Member",
+      "methods": [
+        {
+          "name": "getFullName",
+          "returnType": "String",
+          "params": []
+        }
+      ]
+    }
+  ],
+  "references": [
+    "String",
+    "lombok",
+    "java.time.LocalDate",
+    "java.util.HashSet",
+    "java.util.Set",
+    "jakarta.persistence"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

@@ -1,0 +1,138 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/service/impl/BookServiceImpl.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "impl",
+  "code": "package com.skax.library.service.impl;\n\nimport com.skax.library.dto.BookDto;\nimport com.skax.library.exception.ResourceNotFoundException;\nimport com.skax.library.mapper.BookMapper;\nimport com.skax.library.model.*;\nimport com.skax.library.repository.BookRepository;\nimport com.skax.library.repository.CategoryRepository;\nimport com.skax.library.service.BookService;\nimport jakarta.transaction.Transactional;\nimport lombok.RequiredArgsConstructor;\nimport org.springframework.data.domain.Page;\nimport org.springframework.data.domain.Pageable;\nimport org.springframework.data.jpa.domain.Specification;\nimport org.springframework.stereotype.Service;\n\nimport java.util.List;\nimport java.util.Set;\nimport java.util.stream.Collectors;\n\n@Service\n@RequiredArgsConstructor\npublic class BookServiceImpl implements BookService {\n    private final BookRepository bookRepository;\n    private final CategoryRepository categoryRepository;\n    private final BookMapper bookMapper;\n\n    @Override\n    @Transactional\n    public BookDto createBook(BookDto bookDto, List<Long> categoryIds) {\n        if (bookRepository.existsByIsbn(bookDto.getIsbn())) {\n            throw new IllegalStateException(\"Book with ISBN \" + bookDto.getIsbn() + \" already exists\");\n        }\n        \n        Book book = bookMapper.toEntity(bookDto);\n        Book savedBook = bookRepository.save(book);\n        \n        if (categoryIds != null && !categoryIds.isEmpty()) {\n            addCategoriesToBook(savedBook.getId(), categoryIds);\n        }\n        \n        return bookMapper.toDto(savedBook);\n    }\n\n    @Override\n    @Transactional\n    public BookDto updateBook(Long id, BookDto bookDto, List<Long> categoryIds) {\n        Book existingBook = bookRepository.findById(id)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Book not found with id: \" + id));\n        \n        if (!existingBook.getIsbn().equals(bookDto.getIsbn()) && \n            bookRepository.existsByIsbn(bookDto.getIsbn())) {\n            throw new IllegalStateException(\"Another book with ISBN \" + bookDto.getIsbn() + \" already exists\");\n        }\n        \n        // Update book fields from DTO\n        bookMapper.updateBookFromDto(bookDto, existingBook);\n        \n        // Update categories if provided\n        if (categoryIds != null) {\n            // Remove existing categories\n            existingBook.getCategories().clear();\n            bookRepository.save(existingBook);\n            \n            // Add new categories\n            if (!categoryIds.isEmpty()) {\n                addCategoriesToBook(id, categoryIds);\n            }\n        }\n        \n        Book updatedBook = bookRepository.save(existingBook);\n        return bookMapper.toDto(updatedBook);\n    }\n\n    @Override\n    public BookDto getBookById(Long id) {\n        Book book = bookRepository.findById(id)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Book not found with id: \" + id));\n        return bookMapper.toDto(book);\n    }\n\n    @Override\n    public BookDto getBookByIsbn(String isbn) {\n        Book book = bookRepository.findByIsbn(isbn)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Book not found with ISBN: \" + isbn));\n        return bookMapper.toDto(book);\n    }\n\n    @Override\n    public Page<BookDto> getAllBooks(Pageable pageable) {\n        return bookRepository.findAll(pageable)\n                .map(bookMapper::toDto);\n    }\n\n    @Override\n    public Page<BookDto> searchBooks(String query, Pageable pageable) {\n        return bookRepository.findAll((root, query1, criteriaBuilder) -> {\n            if (query == null || query.trim().isEmpty()) {\n                return criteriaBuilder.conjunction();\n            }\n            String searchTerm = \"%\" + query.toLowerCase() + \"%\";\n            return criteriaBuilder.or(\n                criteriaBuilder.like(criteriaBuilder.lower(root.get(\"title\")), searchTerm),\n                criteriaBuilder.like(criteriaBuilder.lower(root.get(\"author\")), searchTerm),\n                criteriaBuilder.like(criteriaBuilder.lower(root.get(\"isbn\")), query.toLowerCase())\n            );\n        }, pageable).map(bookMapper::toDto);\n    }\n\n    @Override\n    public List<BookDto> getBooksByCategory(Long categoryId) {\n        return bookRepository.findByCategories_CategoryId(categoryId).stream()\n                .map(bookMapper::toDto)\n                .collect(Collectors.toList());\n    }\n\n    @Override\n    public List<BookDto> getAvailableBooks() {\n        return bookRepository.findAvailableBooks().stream()\n                .map(bookMapper::toDto)\n                .collect(Collectors.toList());\n    }\n\n    @Override\n    @Transactional\n    public void deleteBook(Long id) {\n        Book book = bookRepository.findById(id)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Book not found with id: \" + id));\n                \n        if (book.getAvailableCopies() < book.getTotalCopies()) {\n            throw new IllegalStateException(\"Cannot delete book with active loans\");\n        }\n        \n        bookRepository.delete(book);\n    }\n\n    @Override\n    @Transactional\n    public BookDto updateBookStatus(Long id, Book.BookStatus status) {\n        Book book = bookRepository.findById(id)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Book not found with id: \" + id));\n                \n        book.setStatus(status);\n        Book updatedBook = bookRepository.save(book);\n        return bookMapper.toDto(updatedBook);\n    }\n\n    @Override\n    @Transactional\n    public BookDto addCategoriesToBook(Long bookId, List<Long> categoryIds) {\n        Book book = bookRepository.findById(bookId)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Book not found with id: \" + bookId));\n                \n        Set<BookCategory> existingCategories = book.getCategories();\n        \n        categoryIds.forEach(categoryId -> {\n            Category category = categoryRepository.findById(categoryId)\n                    .orElseThrow(() -> new ResourceNotFoundException(\"Category not found with id: \" + categoryId));\n            \n            boolean categoryExists = existingCategories.stream()\n                    .anyMatch(bc -> bc.getCategory().getId().equals(categoryId));\n                    \n            if (!categoryExists) {\n                BookCategory bookCategory = BookCategory.builder()\n                        .book(book)\n                        .category(category)\n                        .isPrimary(false)\n                        .build();\n                existingCategories.add(bookCategory);\n            }\n        });\n        \n        Book updatedBook = bookRepository.save(book);\n        return bookMapper.toDto(updatedBook);\n    }\n\n    @Override\n    @Transactional\n    public BookDto removeCategoryFromBook(Long bookId, Long categoryId) {\n        Book book = bookRepository.findById(bookId)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Book not found with id: \" + bookId));\n        \n        boolean removed = book.getCategories().removeIf(\n            bc -> bc.getCategory().getId().equals(categoryId)\n        );\n        \n        if (!removed) {\n            throw new ResourceNotFoundException(\"Category \" + categoryId + \" not found for book \" + bookId);\n        }\n        \n        Book updatedBook = bookRepository.save(book);\n        return bookMapper.toDto(updatedBook);\n    }\n\n    public Page<BookDto> findAll(Specification<Book> spec, Pageable pageable) {\n        return bookRepository.findAll(spec, pageable)\n                .map(bookMapper::toDto);\n    }\n}\n",
+  "classes": [
+    {
+      "name": "BookServiceImpl",
+      "methods": [
+        {
+          "name": "createBook",
+          "returnType": "BookDto",
+          "params": [
+            "BookDto bookDto",
+            "List categoryIds"
+          ]
+        },
+        {
+          "name": "updateBook",
+          "returnType": "BookDto",
+          "params": [
+            "Long id",
+            "BookDto bookDto",
+            "List categoryIds"
+          ]
+        },
+        {
+          "name": "getBookById",
+          "returnType": "BookDto",
+          "params": [
+            "Long id"
+          ]
+        },
+        {
+          "name": "getBookByIsbn",
+          "returnType": "BookDto",
+          "params": [
+            "String isbn"
+          ]
+        },
+        {
+          "name": "getAllBooks",
+          "returnType": "Page",
+          "params": [
+            "Pageable pageable"
+          ]
+        },
+        {
+          "name": "searchBooks",
+          "returnType": "Page",
+          "params": [
+            "String query",
+            "Pageable pageable"
+          ]
+        },
+        {
+          "name": "getBooksByCategory",
+          "returnType": "List",
+          "params": [
+            "Long categoryId"
+          ]
+        },
+        {
+          "name": "getAvailableBooks",
+          "returnType": "List",
+          "params": []
+        },
+        {
+          "name": "deleteBook",
+          "returnType": "void",
+          "params": [
+            "Long id"
+          ]
+        },
+        {
+          "name": "updateBookStatus",
+          "returnType": "BookDto",
+          "params": [
+            "Long id",
+            "Book status"
+          ]
+        },
+        {
+          "name": "addCategoriesToBook",
+          "returnType": "BookDto",
+          "params": [
+            "Long bookId",
+            "List categoryIds"
+          ]
+        },
+        {
+          "name": "removeCategoryFromBook",
+          "returnType": "BookDto",
+          "params": [
+            "Long bookId",
+            "Long categoryId"
+          ]
+        },
+        {
+          "name": "findAll",
+          "returnType": "Page",
+          "params": [
+            "Specification spec",
+            "Pageable pageable"
+          ]
+        }
+      ]
+    }
+  ],
+  "references": [
+    "java.util.List",
+    "java.util.Set",
+    "com.skax.library.repository.CategoryRepository",
+    "Book",
+    "com.skax.library.repository.BookRepository",
+    "jakarta.transaction.Transactional",
+    "com.skax.library.dto.BookDto",
+    "Specification",
+    "lombok.RequiredArgsConstructor",
+    "org.springframework.stereotype.Service",
+    "List",
+    "com.skax.library.service.BookService",
+    "com.skax.library.exception.ResourceNotFoundException",
+    "org.springframework.data.domain.Page",
+    "com.skax.library.mapper.BookMapper",
+    "String",
+    "Pageable",
+    "Page",
+    "org.springframework.data.jpa.domain.Specification",
+    "Long",
+    "org.springframework.data.domain.Pageable",
+    "BookDto",
+    "com.skax.library.model",
+    "java.util.stream.Collectors"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

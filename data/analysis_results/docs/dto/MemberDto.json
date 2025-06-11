@@ -1,0 +1,45 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/dto/MemberDto.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "dto",
+  "code": "package com.skax.library.dto;\n\nimport com.skax.library.model.Member;\nimport jakarta.validation.constraints.Email;\nimport jakarta.validation.constraints.NotBlank;\nimport jakarta.validation.constraints.Past;\nimport jakarta.validation.constraints.Pattern;\nimport lombok.Getter;\nimport lombok.Setter;\n\nimport java.time.LocalDate;\n\n@Getter\n@Setter\npublic class MemberDto extends BaseDto {\n    @NotBlank(message = \"First name is required\")\n    private String firstName;\n    \n    @NotBlank(message = \"Last name is required\")\n    private String lastName;\n    \n    @NotBlank(message = \"Email is required\")\n    @Email(message = \"Invalid email format\")\n    private String email;\n    \n    @Pattern(regexp = \"^[0-9\\\\-\\\\+]{9,15}$\", message = \"Invalid phone number format\")\n    private String phoneNumber;\n    \n    @NotBlank(message = \"Address is required\")\n    private String address;\n    \n    @Past(message = \"Date of birth must be in the past\")\n    private LocalDate dateOfBirth;\n    \n    private LocalDate membershipStartDate;\n    private LocalDate membershipEndDate;\n    private Member.MemberStatus status;\n    private Integer maxBooksAllowed;\n    \n    // For responses\n    private Integer borrowedBooksCount;\n    private Integer activeReservationsCount;\n    private Double totalFines;\n    \n    public static MemberDto fromEntity(Member member) {\n        if (member == null) {\n            return null;\n        }\n        \n        MemberDto dto = new MemberDto();\n        dto.setId(member.getId());\n        dto.setFirstName(member.getFirstName());\n        dto.setLastName(member.getLastName());\n        dto.setEmail(member.getEmail());\n        dto.setPhoneNumber(member.getPhoneNumber());\n        dto.setAddress(member.getAddress());\n        dto.setDateOfBirth(member.getDateOfBirth());\n        dto.setMembershipStartDate(member.getMembershipStartDate());\n        dto.setMembershipEndDate(member.getMembershipEndDate());\n        dto.setStatus(member.getStatus());\n        dto.setMaxBooksAllowed(member.getMaxBooksAllowed());\n        dto.setCreatedAt(member.getCreatedAt());\n        dto.setUpdatedAt(member.getUpdatedAt());\n        \n        return dto;\n    }\n    \n    public Member toEntity() {\n        Member member = new Member();\n        member.setFirstName(this.firstName);\n        member.setLastName(this.lastName);\n        member.setEmail(this.email);\n        member.setPhoneNumber(this.phoneNumber);\n        member.setAddress(this.address);\n        member.setDateOfBirth(this.dateOfBirth);\n        member.setMembershipStartDate(this.membershipStartDate != null ? this.membershipStartDate : LocalDate.now());\n        member.setMembershipEndDate(this.membershipEndDate);\n        member.setStatus(this.status != null ? this.status : Member.MemberStatus.ACTIVE);\n        member.setMaxBooksAllowed(this.maxBooksAllowed != null ? this.maxBooksAllowed : 5);\n        \n        return member;\n    }\n    \n    public String getFullName() {\n        return String.format(\"%s %s\", firstName, lastName);\n    }\n}\n",
+  "classes": [
+    {
+      "name": "MemberDto",
+      "methods": [
+        {
+          "name": "fromEntity",
+          "returnType": "MemberDto",
+          "params": [
+            "Member member"
+          ]
+        },
+        {
+          "name": "toEntity",
+          "returnType": "Member",
+          "params": []
+        },
+        {
+          "name": "getFullName",
+          "returnType": "String",
+          "params": []
+        }
+      ]
+    }
+  ],
+  "references": [
+    "String",
+    "lombok.Getter",
+    "MemberDto",
+    "jakarta.validation.constraints.Past",
+    "com.skax.library.model.Member",
+    "lombok.Setter",
+    "jakarta.validation.constraints.Pattern",
+    "java.time.LocalDate",
+    "jakarta.validation.constraints.Email",
+    "Member",
+    "jakarta.validation.constraints.NotBlank"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

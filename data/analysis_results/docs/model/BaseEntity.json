@@ -1,0 +1,23 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/model/BaseEntity.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "model",
+  "code": "package com.skax.library.model;\n\nimport jakarta.persistence.*;\nimport lombok.Getter;\nimport lombok.Setter;\nimport org.hibernate.annotations.CreationTimestamp;\nimport org.hibernate.annotations.UpdateTimestamp;\nimport org.springframework.data.jpa.domain.support.AuditingEntityListener;\n\nimport java.time.LocalDateTime;\n\n@MappedSuperclass\n@Getter\n@Setter\n@EntityListeners(AuditingEntityListener.class)\npublic abstract class BaseEntity {\n    @Id\n    @GeneratedValue(strategy = GenerationType.IDENTITY)\n    private Long id;\n\n    @CreationTimestamp\n    @Column(updatable = false)\n    private LocalDateTime createdAt;\n\n    @UpdateTimestamp\n    private LocalDateTime updatedAt;\n\n    @Version\n    private Long version;\n}\n",
+  "classes": [
+    {
+      "name": "BaseEntity",
+      "methods": []
+    }
+  ],
+  "references": [
+    "lombok.Getter",
+    "java.time.LocalDateTime",
+    "org.hibernate.annotations.CreationTimestamp",
+    "lombok.Setter",
+    "org.springframework.data.jpa.domain.support.AuditingEntityListener",
+    "org.hibernate.annotations.UpdateTimestamp",
+    "jakarta.persistence"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

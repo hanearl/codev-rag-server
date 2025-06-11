@@ -1,0 +1,20 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/model/Book.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "model",
+  "code": "package com.skax.library.model;\n\nimport jakarta.persistence.*;\nimport lombok.*;\n\nimport java.util.HashSet;\nimport java.util.Set;\n\n@Entity\n@Table(name = \"books\")\n@Getter\n@Setter\n@NoArgsConstructor\n@AllArgsConstructor\n@Builder\npublic class Book extends BaseEntity {\n    @Column(nullable = false)\n    private String title;\n\n    @Column(columnDefinition = \"TEXT\")\n    private String description;\n\n    @Column(nullable = false)\n    private String isbn;\n\n    @Column(name = \"publication_year\")\n    private Integer publicationYear;\n\n    @Column(nullable = false)\n    private String author;\n\n    @Column(name = \"publisher\")\n    private String publisher;\n\n    @Column(name = \"total_copies\", nullable = false)\n    @Builder.Default\n    private Integer totalCopies = 1;\n\n    @Column(name = \"available_copies\", nullable = false)\n    @Builder.Default\n    private Integer availableCopies = 1;\n\n    @Column(name = \"cover_image_url\")\n    private String coverImageUrl;\n\n    @Enumerated(EnumType.STRING)\n    @Column(nullable = false)\n    @Builder.Default\n    private BookStatus status = BookStatus.AVAILABLE;\n\n    @OneToMany(mappedBy = \"book\", cascade = CascadeType.ALL, orphanRemoval = true)\n    @Builder.Default\n    private Set<BookCategory> categories = new HashSet<>();\n\n    @OneToMany(mappedBy = \"book\")\n    @Builder.Default\n    private Set<Loan> loans = new HashSet<>();\n\n    @OneToMany(mappedBy = \"book\")\n    @Builder.Default\n    private Set<Reservation> reservations = new HashSet<>();\n\n    public enum BookStatus {\n        AVAILABLE, \n        ON_LOAN, \n        RESERVED, \n        LOST, \n        DAMAGED,\n        UNDER_MAINTENANCE\n    }\n}\n",
+  "classes": [
+    {
+      "name": "Book",
+      "methods": []
+    }
+  ],
+  "references": [
+    "java.util.HashSet",
+    "lombok",
+    "jakarta.persistence",
+    "java.util.Set"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

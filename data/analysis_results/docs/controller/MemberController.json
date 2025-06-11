@@ -1,0 +1,109 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/controller/MemberController.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "controller",
+  "code": "package com.skax.library.controller;\n\nimport com.skax.library.dto.LoanDto;\nimport com.skax.library.dto.MemberDto;\nimport com.skax.library.dto.ReservationDto;\nimport com.skax.library.model.Member;\nimport com.skax.library.service.LoanService;\nimport com.skax.library.service.MemberService;\nimport com.skax.library.service.ReservationService;\nimport io.swagger.v3.oas.annotations.Operation;\nimport io.swagger.v3.oas.annotations.Parameter;\nimport io.swagger.v3.oas.annotations.tags.Tag;\nimport jakarta.validation.Valid;\nimport lombok.RequiredArgsConstructor;\nimport org.springframework.data.domain.Page;\nimport org.springframework.data.domain.Pageable;\nimport org.springframework.data.web.PageableDefault;\nimport org.springframework.http.HttpStatus;\nimport org.springframework.http.ResponseEntity;\nimport org.springframework.web.bind.annotation.*;\n\nimport java.util.List;\n\n@RestController\n@RequestMapping(\"/api/members\")\n@Tag(name = \"Member Management\", description = \"APIs for managing library members\")\n@RequiredArgsConstructor\npublic class MemberController {\n    private final MemberService memberService;\n    private final LoanService loanService;\n    private final ReservationService reservationService;\n\n    @PostMapping\n    @Operation(summary = \"Register a new member\")\n    public ResponseEntity<MemberDto> registerMember(@Valid @RequestBody MemberDto memberDto) {\n        MemberDto createdMember = memberService.createMember(memberDto);\n        return new ResponseEntity<>(createdMember, HttpStatus.CREATED);\n    }\n\n    @PutMapping(\"/{id}\")\n    @Operation(summary = \"Update a member by ID\")\n    public ResponseEntity<MemberDto> updateMember(\n            @Parameter(description = \"ID of the member to be updated\")\n            @PathVariable Long id,\n            @Valid @RequestBody MemberDto memberDto) {\n        MemberDto updatedMember = memberService.updateMember(id, memberDto);\n        return ResponseEntity.ok(updatedMember);\n    }\n\n    @GetMapping(\"/{id}\")\n    @Operation(summary = \"Get a member by ID\")\n    public ResponseEntity<MemberDto> getMemberById(\n            @Parameter(description = \"ID of the member to be retrieved\")\n            @PathVariable Long id) {\n        MemberDto memberDto = memberService.getMemberById(id);\n        return ResponseEntity.ok(memberDto);\n    }\n\n    @GetMapping\n    @Operation(summary = \"Get all members with pagination\")\n    public ResponseEntity<Page<MemberDto>> getAllMembers(\n            @PageableDefault(size = 20) Pageable pageable,\n            @Parameter(description = \"Search query for member name or email\")\n            @RequestParam(required = false) String search) {\n        Page<MemberDto> members;\n        if (search != null && !search.trim().isEmpty()) {\n            members = memberService.searchMembers(search, pageable);\n        } else {\n            members = memberService.getAllMembers(pageable);\n        }\n        return ResponseEntity.ok(members);\n    }\n\n    @GetMapping(\"/active\")\n    @Operation(summary = \"Get all active members\")\n    public ResponseEntity<List<MemberDto>> getActiveMembers() {\n        List<MemberDto> activeMembers = memberService.getActiveMembers();\n        return ResponseEntity.ok(activeMembers);\n    }\n\n    @DeleteMapping(\"/{id}\")\n    @Operation(summary = \"Delete a member by ID\")\n    public ResponseEntity<Void> deleteMember(\n            @Parameter(description = \"ID of the member to be deleted\")\n            @PathVariable Long id) {\n        memberService.deleteMember(id);\n        return ResponseEntity.noContent().build();\n    }\n\n    @PutMapping(\"/{id}/status\")\n    @Operation(summary = \"Update member status\")\n    public ResponseEntity<MemberDto> updateMemberStatus(\n            @Parameter(description = \"ID of the member to update status for\")\n            @PathVariable Long id,\n            @Parameter(description = \"New status for the member\")\n            @RequestParam Member.MemberStatus status) {\n        MemberDto updatedMember = memberService.updateMemberStatus(id, status);\n        return ResponseEntity.ok(updatedMember);\n    }\n\n    @GetMapping(\"/{memberId}/loans\")\n    @Operation(summary = \"Get all loans for a member\")\n    public ResponseEntity<List<LoanDto>> getMemberLoans(\n            @Parameter(description = \"ID of the member to get loans for\")\n            @PathVariable Long memberId,\n            @Parameter(description = \"Filter for active loans only\")\n            @RequestParam(required = false) Boolean active) {\n        List<LoanDto> loans;\n        if (active != null && active) {\n            loans = loanService.getActiveLoansByMemberId(memberId);\n        } else {\n            loans = loanService.getLoansByMemberId(memberId);\n        }\n        return ResponseEntity.ok(loans);\n    }\n\n    @GetMapping(\"/{memberId}/reservations\")\n    @Operation(summary = \"Get all reservations for a member\")\n    public ResponseEntity<List<ReservationDto>> getMemberReservations(\n            @Parameter(description = \"ID of the member to get reservations for\")\n            @PathVariable Long memberId,\n            @Parameter(description = \"Filter for active reservations only\")\n            @RequestParam(required = false) Boolean active) {\n        List<ReservationDto> reservations;\n        if (active != null && active) {\n            reservations = reservationService.getActiveReservationsByMemberId(memberId);\n        } else {\n            reservations = reservationService.getReservationsByMemberId(memberId);\n        }\n        return ResponseEntity.ok(reservations);\n    }\n}\n",
+  "classes": [
+    {
+      "name": "MemberController",
+      "methods": [
+        {
+          "name": "registerMember",
+          "returnType": "ResponseEntity",
+          "params": [
+            "MemberDto memberDto"
+          ]
+        },
+        {
+          "name": "updateMember",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long id",
+            "MemberDto memberDto"
+          ]
+        },
+        {
+          "name": "getMemberById",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long id"
+          ]
+        },
+        {
+          "name": "getAllMembers",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Pageable pageable",
+            "String search"
+          ]
+        },
+        {
+          "name": "getActiveMembers",
+          "returnType": "ResponseEntity",
+          "params": []
+        },
+        {
+          "name": "deleteMember",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long id"
+          ]
+        },
+        {
+          "name": "updateMemberStatus",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long id",
+            "Member status"
+          ]
+        },
+        {
+          "name": "getMemberLoans",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long memberId",
+            "Boolean active"
+          ]
+        },
+        {
+          "name": "getMemberReservations",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long memberId",
+            "Boolean active"
+          ]
+        }
+      ]
+    }
+  ],
+  "references": [
+    "com.skax.library.dto.ReservationDto",
+    "MemberDto",
+    "java.util.List",
+    "ResponseEntity",
+    "org.springframework.data.web.PageableDefault",
+    "org.springframework.http.ResponseEntity",
+    "com.skax.library.dto.MemberDto",
+    "io.swagger.v3.oas.annotations.Parameter",
+    "com.skax.library.service.ReservationService",
+    "io.swagger.v3.oas.annotations.tags.Tag",
+    "com.skax.library.model.Member",
+    "Member",
+    "lombok.RequiredArgsConstructor",
+    "org.springframework.http.HttpStatus",
+    "org.springframework.data.domain.Page",
+    "jakarta.validation.Valid",
+    "org.springframework.web.bind.annotation",
+    "com.skax.library.service.MemberService",
+    "String",
+    "Pageable",
+    "com.skax.library.service.LoanService",
+    "com.skax.library.dto.LoanDto",
+    "Boolean",
+    "Long",
+    "org.springframework.data.domain.Pageable",
+    "io.swagger.v3.oas.annotations.Operation"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

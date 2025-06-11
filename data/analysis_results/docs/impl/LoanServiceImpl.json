@@ -1,0 +1,156 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/service/impl/LoanServiceImpl.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "impl",
+  "code": "package com.skax.library.service.impl;\n\nimport com.skax.library.dto.LoanDto;\nimport com.skax.library.exception.BookNotAvailableException;\nimport com.skax.library.exception.InvalidLoanExtensionException;\nimport com.skax.library.exception.ResourceNotFoundException;\nimport com.skax.library.model.*;\nimport com.skax.library.repository.BookRepository;\nimport com.skax.library.repository.LoanRepository;\nimport com.skax.library.repository.MemberRepository;\nimport com.skax.library.service.LoanService;\nimport lombok.RequiredArgsConstructor;\nimport org.springframework.data.domain.Page;\nimport org.springframework.data.domain.Pageable;\nimport org.springframework.data.jpa.domain.Specification;\nimport org.springframework.stereotype.Service;\nimport org.springframework.transaction.annotation.Transactional;\n\nimport java.time.LocalDate;\nimport java.util.List;\nimport java.util.stream.Collectors;\n\n@Service\n@RequiredArgsConstructor\npublic class LoanServiceImpl implements LoanService {\n    private final LoanRepository loanRepository;\n    private final BookRepository bookRepository;\n    private final MemberRepository memberRepository;\n\n    @Override\n    @Transactional\n    public LoanDto createLoan(LoanDto loanDto) {\n        Book book = bookRepository.findById(loanDto.getBookId())\n                .orElseThrow(() -> new ResourceNotFoundException(\"Book not found with id: \" + loanDto.getBookId()));\n        \n        Member member = memberRepository.findById(loanDto.getMemberId())\n                .orElseThrow(() -> new ResourceNotFoundException(\"Member not found with id: \" + loanDto.getMemberId()));\n        \n        Loan loan = loanDto.toEntity();\n        loan.setBook(book);\n        loan.setMember(member);\n        \n        Loan savedLoan = loanRepository.save(loan);\n        return LoanDto.fromEntity(savedLoan);\n    }\n\n    @Override\n    @Transactional\n    public LoanDto checkoutBook(Long bookId, Long memberId) {\n        Book book = bookRepository.findById(bookId)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Book not found with id: \" + bookId));\n                \n        Member member = memberRepository.findById(memberId)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Member not found with id: \" + memberId));\n        \n        if (!isBookAvailable(bookId)) {\n            throw new BookNotAvailableException(\"Book with id \" + bookId + \" is not available for checkout\");\n        }\n        \n        if (!canMemberBorrow(memberId)) {\n            throw new IllegalStateException(\"Member with id \" + memberId + \" cannot borrow more books\");\n        }\n        \n        // 기본 대출 기간은 14일\n        LocalDate dueDate = LocalDate.now().plusDays(14);\n        \n        Loan loan = Loan.builder()\n                .book(book)\n                .member(member)\n                .loanDate(LocalDate.now())\n                .dueDate(dueDate)\n                .build();\n        \n        // Update book available copies\n        book.setAvailableCopies(book.getAvailableCopies() - 1);\n        if (book.getAvailableCopies() <= 0) {\n            book.setStatus(Book.BookStatus.ON_LOAN);\n        }\n        \n        bookRepository.save(book);\n        Loan savedLoan = loanRepository.save(loan);\n        return LoanDto.fromEntity(savedLoan);\n    }\n\n    @Override\n    @Transactional\n    public LoanDto returnBook(Long loanId) {\n        Loan loan = loanRepository.findById(loanId)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Loan not found with id: \" + loanId));\n        \n        if (loan.getReturnDate() != null) {\n            throw new IllegalStateException(\"Book already returned\");\n        }\n        \n        Book book = loan.getBook();\n        book.setAvailableCopies(book.getAvailableCopies() + 1);\n        \n        if (book.getStatus() == Book.BookStatus.ON_LOAN && book.getAvailableCopies() > 0) {\n            book.setStatus(Book.BookStatus.AVAILABLE);\n        }\n        \n        bookRepository.save(book);\n        \n        loan.setReturnDate(LocalDate.now());\n        loan.setStatus(Loan.LoanStatus.RETURNED);\n        \n        Loan updatedLoan = loanRepository.save(loan);\n        return LoanDto.fromEntity(updatedLoan);\n    }\n\n    @Override\n    @Transactional\n    public LoanDto extendLoan(Long loanId, Integer additionalDays) {\n        Loan loan = loanRepository.findById(loanId)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Loan not found with id: \" + loanId));\n        \n        if (loan.getReturnDate() != null) {\n            throw new IllegalStateException(\"Cannot extend a returned loan\");\n        }\n        \n        LocalDate newDueDate = loan.getDueDate().plusDays(additionalDays);\n        \n        if (newDueDate.isBefore(loan.getDueDate())) {\n            throw new InvalidLoanExtensionException(\"New due date must be after current due date\");\n        }\n        \n        if (loan.getExtendedCount() >= 2) {\n            throw new InvalidLoanExtensionException(\"Maximum number of extensions reached\");\n        }\n        \n        loan.setDueDate(newDueDate);\n        loan.setExtendedCount(loan.getExtendedCount() + 1);\n        \n        Loan updatedLoan = loanRepository.save(loan);\n        return LoanDto.fromEntity(updatedLoan);\n    }\n\n    @Override\n    public LoanDto getLoanById(Long id) {\n        Loan loan = loanRepository.findById(id)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Loan not found with id: \" + id));\n        return LoanDto.fromEntity(loan);\n    }\n\n    @Override\n    public Page<LoanDto> getAllLoans(Pageable pageable) {\n        return loanRepository.findAll(pageable)\n                .map(LoanDto::fromEntity);\n    }\n\n    @Override\n    public Page<LoanDto> getLoansByMemberId(Long memberId, Pageable pageable) {\n        Specification<Loan> spec = (root, query, cb) -> \n            cb.equal(root.get(\"member\").get(\"id\"), memberId);\n        return loanRepository.findAll(spec, pageable)\n                .map(LoanDto::fromEntity);\n    }\n\n    @Override\n    public Page<LoanDto> getLoansByBookId(Long bookId, Pageable pageable) {\n        Specification<Loan> spec = (root, query, cb) -> \n            cb.equal(root.get(\"book\").get(\"id\"), bookId);\n        return loanRepository.findAll(spec, pageable)\n                .map(LoanDto::fromEntity);\n    }\n\n    @Override\n    public Page<LoanDto> getLoansByStatus(Boolean active, Pageable pageable) {\n        Specification<Loan> spec;\n        if (active) {\n            spec = (root, query, cb) -> cb.isNull(root.get(\"returnDate\"));\n        } else {\n            spec = (root, query, cb) -> cb.isNotNull(root.get(\"returnDate\"));\n        }\n        return loanRepository.findAll(spec, pageable)\n                .map(LoanDto::fromEntity);\n    }\n\n    @Override\n    public List<LoanDto> getOverdueLoans() {\n        return loanRepository.findOverdueLoans(LocalDate.now()).stream()\n                .map(LoanDto::fromEntity)\n                .collect(Collectors.toList());\n    }\n\n    @Override\n    public List<LoanDto> getLoansByMemberId(Long memberId) {\n        return loanRepository.findByMemberId(memberId).stream()\n                .map(LoanDto::fromEntity)\n                .collect(Collectors.toList());\n    }\n\n    @Override\n    public List<LoanDto> getLoansByBookId(Long bookId) {\n        return loanRepository.findByBookId(bookId).stream()\n                .map(LoanDto::fromEntity)\n                .collect(Collectors.toList());\n    }\n\n    @Override\n    public List<LoanDto> getActiveLoans() {\n        return loanRepository.findAll().stream()\n                .filter(loan -> loan.getReturnDate() == null)\n                .map(LoanDto::fromEntity)\n                .collect(Collectors.toList());\n    }\n\n    @Override\n    public List<LoanDto> getActiveLoansByMemberId(Long memberId) {\n        return loanRepository.findActiveLoansByMemberId(memberId).stream()\n                .map(LoanDto::fromEntity)\n                .collect(Collectors.toList());\n    }\n\n    @Override\n    public boolean isBookAvailable(Long bookId) {\n        Book book = bookRepository.findById(bookId)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Book not found with id: \" + bookId));\n        return book.getAvailableCopies() > 0 && book.getStatus() == Book.BookStatus.AVAILABLE;\n    }\n\n    @Override\n    public boolean canMemberBorrow(Long memberId) {\n        Member member = memberRepository.findById(memberId)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Member not found with id: \" + memberId));\n        \n        if (member.getStatus() != Member.MemberStatus.ACTIVE) {\n            return false;\n        }\n        \n        int activeLoans = loanRepository.countActiveLoansByMemberId(memberId);\n        return activeLoans < member.getMaxBooksAllowed();\n    }\n}\n",
+  "classes": [
+    {
+      "name": "LoanServiceImpl",
+      "methods": [
+        {
+          "name": "createLoan",
+          "returnType": "LoanDto",
+          "params": [
+            "LoanDto loanDto"
+          ]
+        },
+        {
+          "name": "checkoutBook",
+          "returnType": "LoanDto",
+          "params": [
+            "Long bookId",
+            "Long memberId"
+          ]
+        },
+        {
+          "name": "returnBook",
+          "returnType": "LoanDto",
+          "params": [
+            "Long loanId"
+          ]
+        },
+        {
+          "name": "extendLoan",
+          "returnType": "LoanDto",
+          "params": [
+            "Long loanId",
+            "Integer additionalDays"
+          ]
+        },
+        {
+          "name": "getLoanById",
+          "returnType": "LoanDto",
+          "params": [
+            "Long id"
+          ]
+        },
+        {
+          "name": "getAllLoans",
+          "returnType": "Page",
+          "params": [
+            "Pageable pageable"
+          ]
+        },
+        {
+          "name": "getLoansByMemberId",
+          "returnType": "Page",
+          "params": [
+            "Long memberId",
+            "Pageable pageable"
+          ]
+        },
+        {
+          "name": "getLoansByBookId",
+          "returnType": "Page",
+          "params": [
+            "Long bookId",
+            "Pageable pageable"
+          ]
+        },
+        {
+          "name": "getLoansByStatus",
+          "returnType": "Page",
+          "params": [
+            "Boolean active",
+            "Pageable pageable"
+          ]
+        },
+        {
+          "name": "getOverdueLoans",
+          "returnType": "List",
+          "params": []
+        },
+        {
+          "name": "getLoansByMemberId",
+          "returnType": "List",
+          "params": [
+            "Long memberId"
+          ]
+        },
+        {
+          "name": "getLoansByBookId",
+          "returnType": "List",
+          "params": [
+            "Long bookId"
+          ]
+        },
+        {
+          "name": "getActiveLoans",
+          "returnType": "List",
+          "params": []
+        },
+        {
+          "name": "getActiveLoansByMemberId",
+          "returnType": "List",
+          "params": [
+            "Long memberId"
+          ]
+        },
+        {
+          "name": "isBookAvailable",
+          "returnType": "boolean",
+          "params": [
+            "Long bookId"
+          ]
+        },
+        {
+          "name": "canMemberBorrow",
+          "returnType": "boolean",
+          "params": [
+            "Long memberId"
+          ]
+        }
+      ]
+    }
+  ],
+  "references": [
+    "java.util.List",
+    "com.skax.library.repository.MemberRepository",
+    "com.skax.library.exception.InvalidLoanExtensionException",
+    "LoanDto",
+    "com.skax.library.repository.BookRepository",
+    "com.skax.library.exception.BookNotAvailableException",
+    "lombok.RequiredArgsConstructor",
+    "org.springframework.stereotype.Service",
+    "List",
+    "Integer",
+    "com.skax.library.exception.ResourceNotFoundException",
+    "org.springframework.data.domain.Page",
+    "boolean",
+    "com.skax.library.repository.LoanRepository",
+    "Pageable",
+    "org.springframework.transaction.annotation.Transactional",
+    "com.skax.library.service.LoanService",
+    "com.skax.library.dto.LoanDto",
+    "Page",
+    "Boolean",
+    "org.springframework.data.jpa.domain.Specification",
+    "java.time.LocalDate",
+    "Long",
+    "org.springframework.data.domain.Pageable",
+    "com.skax.library.model",
+    "java.util.stream.Collectors"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

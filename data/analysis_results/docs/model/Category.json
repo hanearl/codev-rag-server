@@ -1,0 +1,20 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/model/Category.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "model",
+  "code": "package com.skax.library.model;\n\nimport jakarta.persistence.*;\nimport lombok.*;\n\nimport java.util.HashSet;\nimport java.util.Set;\n\n@Entity\n@Table(name = \"categories\")\n@Getter\n@Setter\n@NoArgsConstructor\n@AllArgsConstructor\n@Builder\npublic class Category extends BaseEntity {\n    @Column(nullable = false, unique = true)\n    private String name;\n\n    private String description;\n\n    @ManyToMany(mappedBy = \"categories\")\n    @Builder.Default\n    private Set<Book> books = new HashSet<>();\n}\n",
+  "classes": [
+    {
+      "name": "Category",
+      "methods": []
+    }
+  ],
+  "references": [
+    "java.util.HashSet",
+    "lombok",
+    "jakarta.persistence",
+    "java.util.Set"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

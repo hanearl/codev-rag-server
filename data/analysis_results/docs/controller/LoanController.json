@@ -1,0 +1,114 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/controller/LoanController.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "controller",
+  "code": "package com.skax.library.controller;\n\nimport com.skax.library.dto.LoanDto;\nimport com.skax.library.service.LoanService;\nimport io.swagger.v3.oas.annotations.Operation;\nimport io.swagger.v3.oas.annotations.tags.Tag;\nimport jakarta.validation.Valid;\nimport org.springframework.data.domain.Page;\nimport org.springframework.data.domain.Pageable;\nimport org.springframework.data.web.PageableDefault;\nimport org.springframework.http.HttpStatus;\nimport org.springframework.http.ResponseEntity;\nimport org.springframework.web.bind.annotation.*;\n\nimport java.util.List;\n\n@RestController\n@RequestMapping(\"/api/loans\")\n@Tag(name = \"Loan Management\", description = \"APIs for managing book loans\")\npublic class LoanController {\n    private final LoanService loanService;\n\n    public LoanController(LoanService loanService) {\n        this.loanService = loanService;\n    }\n\n    @PostMapping\n    @Operation(summary = \"Create a new loan\")\n    public ResponseEntity<LoanDto> createLoan(@Valid @RequestBody LoanDto loanDto) {\n        LoanDto createdLoan = loanService.createLoan(loanDto);\n        return new ResponseEntity<>(createdLoan, HttpStatus.CREATED);\n    }\n\n    @PostMapping(\"/checkout\")\n    @Operation(summary = \"Checkout a book to a member\")\n    public ResponseEntity<LoanDto> checkoutBook(\n            @RequestParam Long bookId,\n            @RequestParam Long memberId) {\n        LoanDto loanDto = loanService.checkoutBook(bookId, memberId);\n        return new ResponseEntity<>(loanDto, HttpStatus.CREATED);\n    }\n\n    @PutMapping(\"/{id}/return\")\n    @Operation(summary = \"Return a book\")\n    public ResponseEntity<LoanDto> returnBook(@PathVariable Long id) {\n        LoanDto returnedLoan = loanService.returnBook(id);\n        return ResponseEntity.ok(returnedLoan);\n    }\n\n    @PutMapping(\"/{id}/extend\")\n    @Operation(summary = \"Extend a loan\")\n    public ResponseEntity<LoanDto> extendLoan(\n            @PathVariable Long id,\n            @RequestParam(required = false) Integer additionalDays) {\n        LoanDto extendedLoan = loanService.extendLoan(id, additionalDays);\n        return ResponseEntity.ok(extendedLoan);\n    }\n\n    @GetMapping(\"/{id}\")\n    @Operation(summary = \"Get a loan by ID\")\n    public ResponseEntity<LoanDto> getLoanById(@PathVariable Long id) {\n        LoanDto loanDto = loanService.getLoanById(id);\n        return ResponseEntity.ok(loanDto);\n    }\n\n    @GetMapping\n    @Operation(summary = \"Get all loans with pagination and optional filters\")\n    public ResponseEntity<Page<LoanDto>> getAllLoans(\n            @PageableDefault(size = 20) Pageable pageable,\n            @RequestParam(required = false) Long memberId,\n            @RequestParam(required = false) Long bookId,\n            @RequestParam(required = false) Boolean active) {\n        Page<LoanDto> loans;\n        \n        if (memberId != null) {\n            loans = loanService.getLoansByMemberId(memberId, pageable);\n        } else if (bookId != null) {\n            loans = loanService.getLoansByBookId(bookId, pageable);\n        } else if (active != null) {\n            loans = loanService.getLoansByStatus(active, pageable);\n        } else {\n            loans = loanService.getAllLoans(pageable);\n        }\n        \n        return ResponseEntity.ok(loans);\n    }\n\n    @GetMapping(\"/overdue\")\n    @Operation(summary = \"Get all overdue loans\")\n    public ResponseEntity<List<LoanDto>> getOverdueLoans() {\n        List<LoanDto> overdueLoans = loanService.getOverdueLoans();\n        return ResponseEntity.ok(overdueLoans);\n    }\n\n    @GetMapping(\"/member/{memberId}\")\n    @Operation(summary = \"Get all loans for a specific member\")\n    public ResponseEntity<List<LoanDto>> getLoansByMemberId(@PathVariable Long memberId) {\n        List<LoanDto> loans = loanService.getLoansByMemberId(memberId);\n        return ResponseEntity.ok(loans);\n    }\n\n    @GetMapping(\"/book/{bookId}\")\n    @Operation(summary = \"Get all loans for a specific book\")\n    public ResponseEntity<List<LoanDto>> getLoansByBookId(@PathVariable Long bookId) {\n        List<LoanDto> loans = loanService.getLoansByBookId(bookId);\n        return ResponseEntity.ok(loans);\n    }\n\n    @GetMapping(\"/active\")\n    @Operation(summary = \"Get all active loans\")\n    public ResponseEntity<List<LoanDto>> getActiveLoans() {\n        List<LoanDto> activeLoans = loanService.getActiveLoans();\n        return ResponseEntity.ok(activeLoans);\n    }\n}\n",
+  "classes": [
+    {
+      "name": "LoanController",
+      "methods": [
+        {
+          "name": "LoanController",
+          "returnType": null,
+          "params": [
+            "LoanService loanService"
+          ]
+        },
+        {
+          "name": "createLoan",
+          "returnType": "ResponseEntity",
+          "params": [
+            "LoanDto loanDto"
+          ]
+        },
+        {
+          "name": "checkoutBook",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long bookId",
+            "Long memberId"
+          ]
+        },
+        {
+          "name": "returnBook",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long id"
+          ]
+        },
+        {
+          "name": "extendLoan",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long id",
+            "Integer additionalDays"
+          ]
+        },
+        {
+          "name": "getLoanById",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long id"
+          ]
+        },
+        {
+          "name": "getAllLoans",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Pageable pageable",
+            "Long memberId",
+            "Long bookId",
+            "Boolean active"
+          ]
+        },
+        {
+          "name": "getOverdueLoans",
+          "returnType": "ResponseEntity",
+          "params": []
+        },
+        {
+          "name": "getLoansByMemberId",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long memberId"
+          ]
+        },
+        {
+          "name": "getLoansByBookId",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long bookId"
+          ]
+        },
+        {
+          "name": "getActiveLoans",
+          "returnType": "ResponseEntity",
+          "params": []
+        }
+      ]
+    }
+  ],
+  "references": [
+    "java.util.List",
+    "LoanDto",
+    "ResponseEntity",
+    "org.springframework.data.web.PageableDefault",
+    "org.springframework.http.ResponseEntity",
+    "LoanService",
+    "io.swagger.v3.oas.annotations.tags.Tag",
+    "org.springframework.http.HttpStatus",
+    "Integer",
+    "org.springframework.data.domain.Page",
+    "jakarta.validation.Valid",
+    "org.springframework.web.bind.annotation",
+    "Pageable",
+    "com.skax.library.service.LoanService",
+    "com.skax.library.dto.LoanDto",
+    "Boolean",
+    "Long",
+    "org.springframework.data.domain.Pageable",
+    "io.swagger.v3.oas.annotations.Operation"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

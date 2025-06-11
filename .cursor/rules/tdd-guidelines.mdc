@@ -1,0 +1,270 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# TDD (Test-Driven Development) 가이드라인
+
+## 🔴 TDD 필수 원칙
+
+**⚠️ 중요: 이 프로젝트에서는 TDD를 반드시 적용해야 합니다!**
+
+모든 코드 구현은 다음 TDD 사이클을 따라야 합니다:
+
+### 🔄 Red-Green-Refactor 사이클
+
+1. **🔴 Red**: 실패하는 테스트를 먼저 작성
+2. **🟢 Green**: 테스트를 통과하는 최소한의 코드 작성
+3. **🔵 Refactor**: 코드를 개선하고 중복 제거
+
+```
+❌ 잘못된 접근: 구현 → 테스트
+✅ 올바른 접근: 테스트 → 구현 → 리팩토링
+```
+
+## 📁 테스트 구조 규칙
+
+### 1. 기본 테스트 디렉토리 구조
+
+```
+tests/
+├── conftest.py                    ← 공통 fixture 및 설정
+├── unit/                          ← 단위 테스트
+│   ├── features/                  ← Features 테스트
+│   │   ├── users/                 ← 모듈별 폴더
+│   │   │   ├── test_router.py     ← API 라우터 테스트
+│   │   │   ├── test_service.py    ← 비즈니스 로직 테스트
+│   │   │   ├── test_repository.py ← DB 접근 테스트
+│   │   │   └── test_schema.py     ← 스키마 검증 테스트
+│   │   └── items/
+│   │       ├── test_router.py
+│   │       ├── test_service.py
+│   │       ├── test_repository.py
+│   │       └── test_schema.py
+│   └── core/
+│       ├── test_config.py
+│       └── test_security.py
+├── integration/                   ← 통합 테스트
+│   ├── test_user_workflows.py
+│   └── test_api_integration.py
+└── e2e/                          ← End-to-End 테스트
+    ├── test_user_journey.py
+    └── test_api_endpoints.py
+```
+
+### 2. 테스트 파일 매핑 규칙
+
+**모든 소스 파일에 대응하는 테스트 파일이 존재해야 합니다:**
+
+| 소스 파일 | 테스트 파일 | 테스트 타입 |
+|-----------|-------------|-------------|
+| `app/features/users/router.py` | `tests/unit/features/users/test_router.py` | API 엔드포인트 테스트 |
+| `app/features/users/service.py` | `tests/unit/features/users/test_service.py` | 비즈니스 로직 테스트 |
+| `app/features/users/repository.py` | `tests/unit/features/users/test_repository.py` | 데이터 접근 테스트 |
+| `app/features/users/schema.py` | `tests/unit/features/users/test_schema.py` | 스키마 검증 테스트 |
+| `app/features/users/model.py` | `tests/unit/features/users/test_model.py` | 모델 테스트 |
+
+## 🧪 TDD 구현 단계별 가이드
+
+### 1단계: 테스트 먼저 작성 (Red)
+
+```python
+# tests/unit/features/users/test_service.py
+import pytest
+from app.features.users.service import UserService
+from app.features.users.schema import UserCreate
+
+def test_create_user_should_return_user_with_id():
+    """사용자 생성 시 ID가 포함된 사용자 정보를 반환해야 함"""
+    # Given
+    user_data = UserCreate(name="홍길동", email="hong@example.com")
+    service = UserService()
+    
+    # When
+    result = service.create_user(user_data)
+    
+    # Then
+    assert result.id is not None
+    assert result.name == "홍길동"
+    assert result.email == "hong@example.com"
+```
+
+### 2단계: 최소한의 구현 (Green)
+
+```python
+# app/features/users/service.py
+from app.features.users.schema import UserCreate, UserResponse
+
+class UserService:
+    def create_user(self, user_data: UserCreate) -> UserResponse:
+        # 테스트를 통과하는 최소한의 구현
+        return UserResponse(
+            id=1,
+            name=user_data.name,
+            email=user_data.email
+        )
+```
+
+### 3단계: 리팩토링 (Refactor)
+
+```python
+# app/features/users/service.py (개선된 버전)
+from app.features.users.schema import UserCreate, UserResponse
+from app.features.users.repository import UserRepository
+
+class UserService:
+    def __init__(self, repository: UserRepository):
+        self.repository = repository
+    
+    def create_user(self, user_data: UserCreate) -> UserResponse:
+        # 실제 비즈니스 로직 구현
+        user = self.repository.create(user_data.dict())
+        return UserResponse.from_orm(user)
+```
+
+## 🏗️ 테스트 작성 패턴
+
+### 1. Given-When-Then 패턴 사용
+
+```python
+def test_get_user_by_id_should_return_user():
+    """ID로 사용자 조회 시 해당 사용자를 반환해야 함"""
+    # Given (준비)
+    user_id = 1
+    expected_user = User(id=1, name="테스트", email="test@example.com")
+    repository.save(expected_user)
+    
+    # When (실행)
+    result = service.get_user_by_id(user_id)
+    
+    # Then (검증)
+    assert result is not None
+    assert result.id == user_id
+    assert result.name == "테스트"
+```
+
+### 2. 테스트 네이밍 컨벤션
+
+```python
+def test_[메서드명]_should_[예상결과]_when_[조건]():
+    """한글로 테스트 목적 설명"""
+    pass
+
+# 예시들
+def test_create_user_should_raise_exception_when_email_duplicated():
+    """중복된 이메일로 사용자 생성 시 예외가 발생해야 함"""
+    pass
+
+def test_update_user_should_return_updated_user_when_valid_data():
+    """유효한 데이터로 사용자 수정 시 수정된 사용자를 반환해야 함"""
+    pass
+```
+
+### 3. Fixture 활용
+
+```python
+# tests/conftest.py
+import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from app.db.database import Base
+
+@pytest.fixture
+def db_session():
+    """테스트용 데이터베이스 세션"""
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    SessionLocal = sessionmaker(bind=engine)
+    session = SessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
+
+@pytest.fixture
+def user_service(db_session):
+    """UserService 인스턴스"""
+    from app.features.users.service import UserService
+    from app.features.users.repository import UserRepository
+    
+    repository = UserRepository(db_session)
+    return UserService(repository)
+```
+
+## 📊 테스트 커버리지 규칙
+
+### 1. 최소 커버리지 요구사항
+- **전체 코드 커버리지**: 최소 90% 이상
+- **각 모듈별 커버리지**: 최소 85% 이상
+- **중요 비즈니스 로직**: 100% 커버리지
+
+### 2. 커버리지 측정 및 보고
+
+```python
+# pyproject.toml 또는 setup.cfg
+[tool.pytest.ini_options]
+addopts = "--cov=app --cov-report=html --cov-report=term-missing --cov-fail-under=90"
+```
+
+## 🚨 TDD 체크리스트
+
+모든 기능 구현 전에 다음을 확인하세요:
+
+- [ ] 🔴 **실패하는 테스트**를 먼저 작성했는가?
+- [ ] 🟢 **테스트가 통과**하는 최소한의 코드를 작성했는가?
+- [ ] 🔵 **리팩토링**을 통해 코드 품질을 개선했는가?
+- [ ] 📝 **테스트명**이 명확하고 이해하기 쉬운가?
+- [ ] 🎯 **테스트가 하나의 책임**만 검증하는가?
+- [ ] 🔄 **모든 테스트가 독립적**으로 실행되는가?
+
+## 💡 TDD 베스트 프랙티스
+
+### 1. 테스트 우선 개발
+```python
+# ❌ 잘못된 순서
+def create_user():
+    # 구현부터 작성
+    pass
+
+def test_create_user():
+    # 나중에 테스트 작성
+    pass
+
+# ✅ 올바른 순서
+def test_create_user():
+    # 먼저 테스트 작성
+    pass
+
+def create_user():
+    # 테스트 통과를 위한 구현
+    pass
+```
+
+### 2. 작은 단위로 반복
+- 한 번에 하나의 테스트만 작성
+- 테스트가 통과하면 바로 다음 테스트 작성
+- 큰 기능은 작은 단위로 분해
+
+### 3. 의미있는 테스트 작성
+```python
+# ❌ 의미없는 테스트
+def test_add():
+    assert add(2, 2) == 4
+
+# ✅ 의미있는 테스트
+def test_add_should_return_sum_of_two_positive_numbers():
+    """두 양수를 더할 때 올바른 합을 반환해야 함"""
+    result = add(2, 3)
+    assert result == 5
+```
+
+## 🎯 결론
+
+**TDD는 선택이 아닌 필수입니다!**
+
+- 모든 코드는 테스트가 먼저 작성되어야 합니다
+- Red-Green-Refactor 사이클을 엄격히 준수해야 합니다
+- 테스트 커버리지를 지속적으로 모니터링해야 합니다
+- 리팩토링은 테스트가 통과한 후에만 진행해야 합니다
+
+이 규칙들을 따르면 버그가 적고 유지보수가 쉬운 고품질 코드를 작성할 수 있습니다.

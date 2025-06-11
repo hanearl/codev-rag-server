@@ -1,0 +1,134 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/controller/FineController.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "controller",
+  "code": "package com.skax.library.controller;\n\nimport com.skax.library.dto.FineDto;\nimport com.skax.library.service.FineService;\nimport io.swagger.v3.oas.annotations.Operation;\nimport io.swagger.v3.oas.annotations.tags.Tag;\nimport jakarta.validation.Valid;\nimport org.springframework.data.domain.Page;\nimport org.springframework.data.domain.Pageable;\nimport org.springframework.data.web.PageableDefault;\nimport org.springframework.http.HttpStatus;\nimport org.springframework.http.ResponseEntity;\nimport org.springframework.web.bind.annotation.*;\n\nimport java.math.BigDecimal;\nimport java.util.List;\n\n@RestController\n@RequestMapping(\"/api/fines\")\n@Tag(name = \"Fine Management\", description = \"APIs for managing fines\")\npublic class FineController {\n    private final FineService fineService;\n\n    public FineController(FineService fineService) {\n        this.fineService = fineService;\n    }\n\n    @PostMapping\n    @Operation(summary = \"Create a new fine\")\n    public ResponseEntity<FineDto> createFine(@Valid @RequestBody FineDto fineDto) {\n        FineDto createdFine = fineService.createFine(fineDto);\n        return new ResponseEntity<>(createdFine, HttpStatus.CREATED);\n    }\n\n    @PostMapping(\"/loan/{loanId}\")\n    @Operation(summary = \"Create a fine for an overdue loan\")\n    public ResponseEntity<FineDto> createFineForLoan(\n            @PathVariable Long loanId,\n            @RequestParam(required = false) BigDecimal amount,\n            @RequestParam(required = false) String reason) {\n        FineDto fineDto = fineService.createFineForLoan(loanId, amount, reason);\n        return new ResponseEntity<>(fineDto, HttpStatus.CREATED);\n    }\n\n    @PutMapping(\"/{id}\")\n    @Operation(summary = \"Update a fine\")\n    public ResponseEntity<FineDto> updateFine(\n            @PathVariable Long id,\n            @Valid @RequestBody FineDto fineDto) {\n        fineDto.setId(id);\n        FineDto updatedFine = fineService.updateFine(id, fineDto);\n        return ResponseEntity.ok(updatedFine);\n    }\n\n    @PutMapping(\"/{id}/pay\")\n    @Operation(summary = \"Record a payment for a fine\")\n    public ResponseEntity<FineDto> payFine(\n            @PathVariable Long id,\n            @RequestParam BigDecimal amount,\n            @RequestParam(required = false) String paymentReference) {\n        FineDto paidFine = fineService.recordPayment(id, amount, paymentReference);\n        return ResponseEntity.ok(paidFine);\n    }\n\n    @PutMapping(\"/{id}/waive\")\n    @Operation(summary = \"Waive a fine\")\n    public ResponseEntity<FineDto> waiveFine(\n            @PathVariable Long id,\n            @RequestParam(required = false) String reason) {\n        FineDto waivedFine = fineService.waiveFine(id, reason);\n        return ResponseEntity.ok(waivedFine);\n    }\n\n    @GetMapping(\"/{id}\")\n    @Operation(summary = \"Get a fine by ID\")\n    public ResponseEntity<FineDto> getFineById(@PathVariable Long id) {\n        FineDto fineDto = fineService.getFineById(id);\n        return ResponseEntity.ok(fineDto);\n    }\n\n    @GetMapping\n    @Operation(summary = \"Get all fines with optional filters\")\n    public ResponseEntity<Page<FineDto>> getAllFines(\n            @PageableDefault(size = 20) Pageable pageable,\n            @RequestParam(required = false) Long memberId,\n            @RequestParam(required = false) String status,\n            @RequestParam(required = false) Boolean overdue) {\n        \n        Page<FineDto> fines;\n        \n        if (memberId != null) {\n            fines = fineService.getFinesByMemberId(memberId, pageable);\n        } else if (status != null) {\n            fines = fineService.getFinesByStatus(status, pageable);\n        } else if (overdue != null && overdue) {\n            fines = fineService.getOverdueFines(pageable);\n        } else {\n            fines = fineService.getAllFines(pageable);\n        }\n        \n        return ResponseEntity.ok(fines);\n    }\n\n    @GetMapping(\"/member/{memberId}\")\n    @Operation(summary = \"Get all fines for a member\")\n    public ResponseEntity<List<FineDto>> getFinesByMemberId(@PathVariable Long memberId) {\n        List<FineDto> fines = fineService.getFinesByMemberId(memberId);\n        return ResponseEntity.ok(fines);\n    }\n\n    @GetMapping(\"/overdue\")\n    @Operation(summary = \"Get all overdue fines\")\n    public ResponseEntity<List<FineDto>> getOverdueFines() {\n        List<FineDto> overdueFines = fineService.getOverdueFines();\n        return ResponseEntity.ok(overdueFines);\n    }\n\n    @GetMapping(\"/unpaid\")\n    @Operation(summary = \"Get all unpaid fines\")\n    public ResponseEntity<List<FineDto>> getUnpaidFines() {\n        List<FineDto> unpaidFines = fineService.getUnpaidFines();\n        return ResponseEntity.ok(unpaidFines);\n    }\n\n    @GetMapping(\"/loan/{loanId}\")\n    @Operation(summary = \"Get fine by loan ID\")\n    public ResponseEntity<FineDto> getFineByLoanId(@PathVariable Long loanId) {\n        FineDto fineDto = fineService.getFineByLoanId(loanId);\n        return ResponseEntity.ok(fineDto);\n    }\n\n    @GetMapping(\"/total-owed/{memberId}\")\n    @Operation(summary = \"Get total amount owed by a member\")\n    public ResponseEntity<BigDecimal> getTotalOwedByMember(@PathVariable Long memberId) {\n        BigDecimal totalOwed = fineService.getTotalOwedByMember(memberId);\n        return ResponseEntity.ok(totalOwed);\n    }\n}\n",
+  "classes": [
+    {
+      "name": "FineController",
+      "methods": [
+        {
+          "name": "FineController",
+          "returnType": null,
+          "params": [
+            "FineService fineService"
+          ]
+        },
+        {
+          "name": "createFine",
+          "returnType": "ResponseEntity",
+          "params": [
+            "FineDto fineDto"
+          ]
+        },
+        {
+          "name": "createFineForLoan",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long loanId",
+            "BigDecimal amount",
+            "String reason"
+          ]
+        },
+        {
+          "name": "updateFine",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long id",
+            "FineDto fineDto"
+          ]
+        },
+        {
+          "name": "payFine",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long id",
+            "BigDecimal amount",
+            "String paymentReference"
+          ]
+        },
+        {
+          "name": "waiveFine",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long id",
+            "String reason"
+          ]
+        },
+        {
+          "name": "getFineById",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long id"
+          ]
+        },
+        {
+          "name": "getAllFines",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Pageable pageable",
+            "Long memberId",
+            "String status",
+            "Boolean overdue"
+          ]
+        },
+        {
+          "name": "getFinesByMemberId",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long memberId"
+          ]
+        },
+        {
+          "name": "getOverdueFines",
+          "returnType": "ResponseEntity",
+          "params": []
+        },
+        {
+          "name": "getUnpaidFines",
+          "returnType": "ResponseEntity",
+          "params": []
+        },
+        {
+          "name": "getFineByLoanId",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long loanId"
+          ]
+        },
+        {
+          "name": "getTotalOwedByMember",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long memberId"
+          ]
+        }
+      ]
+    }
+  ],
+  "references": [
+    "java.util.List",
+    "ResponseEntity",
+    "org.springframework.data.web.PageableDefault",
+    "org.springframework.http.ResponseEntity",
+    "com.skax.library.dto.FineDto",
+    "io.swagger.v3.oas.annotations.tags.Tag",
+    "FineDto",
+    "org.springframework.http.HttpStatus",
+    "org.springframework.data.domain.Page",
+    "jakarta.validation.Valid",
+    "org.springframework.web.bind.annotation",
+    "BigDecimal",
+    "String",
+    "FineService",
+    "Pageable",
+    "java.math.BigDecimal",
+    "Boolean",
+    "Long",
+    "org.springframework.data.domain.Pageable",
+    "com.skax.library.service.FineService",
+    "io.swagger.v3.oas.annotations.Operation"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

@@ -1,0 +1,39 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/dto/FineDto.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "dto",
+  "code": "package com.skax.library.dto;\n\nimport com.fasterxml.jackson.annotation.JsonFormat;\nimport com.skax.library.model.Fine;\nimport jakarta.validation.constraints.DecimalMin;\nimport jakarta.validation.constraints.NotNull;\nimport lombok.Getter;\nimport lombok.Setter;\n\nimport java.math.BigDecimal;\nimport java.time.LocalDate;\n\n@Getter\n@Setter\npublic class FineDto extends BaseDto {\n    private Long loanId;\n    private LoanDto loan;\n    \n    private Long memberId;\n    private MemberDto member;\n    \n    @NotNull(message = \"Amount is required\")\n    @DecimalMin(value = \"0.0\", inclusive = false, message = \"Amount must be greater than 0\")\n    private BigDecimal amount;\n    \n    @JsonFormat(pattern = \"yyyy-MM-dd\")\n    private LocalDate fineDate;\n    \n    @JsonFormat(pattern = \"yyyy-MM-dd\")\n    private LocalDate dueDate;\n    \n    @JsonFormat(pattern = \"yyyy-MM-dd\")\n    private LocalDate paidDate;\n    \n    private String reason;\n    private Fine.FineStatus status;\n    private String paymentReference;\n    \n    // For responses\n    private Boolean isOverdue;\n    \n    public static FineDto fromEntity(Fine fine) {\n        if (fine == null) {\n            return null;\n        }\n        \n        FineDto dto = new FineDto();\n        dto.setId(fine.getId());\n        \n        if (fine.getLoan() != null) {\n            dto.setLoanId(fine.getLoan().getId());\n            dto.setLoan(LoanDto.fromEntity(fine.getLoan()));\n        }\n        \n        if (fine.getMember() != null) {\n            dto.setMemberId(fine.getMember().getId());\n            dto.setMember(MemberDto.fromEntity(fine.getMember()));\n        }\n        \n        dto.setAmount(fine.getAmount());\n        dto.setFineDate(fine.getFineDate());\n        dto.setDueDate(fine.getDueDate());\n        dto.setPaidDate(fine.getPaidDate());\n        dto.setReason(fine.getReason());\n        dto.setStatus(fine.getStatus());\n        dto.setPaymentReference(fine.getPaymentReference());\n        dto.setCreatedAt(fine.getCreatedAt());\n        dto.setUpdatedAt(fine.getUpdatedAt());\n        \n        // Check if fine is overdue\n        if ((fine.getStatus() == Fine.FineStatus.UNPAID || fine.getStatus() == Fine.FineStatus.PARTIALLY_PAID) \n                && fine.getDueDate() != null && fine.getDueDate().isBefore(LocalDate.now())) {\n            dto.setIsOverdue(true);\n        } else {\n            dto.setIsOverdue(false);\n        }\n        \n        return dto;\n    }\n    \n    public Fine toEntity() {\n        Fine fine = new Fine();\n        fine.setAmount(this.amount);\n        fine.setFineDate(this.fineDate != null ? this.fineDate : LocalDate.now());\n        fine.setDueDate(this.dueDate);\n        fine.setPaidDate(this.paidDate);\n        fine.setReason(this.reason);\n        fine.setStatus(this.status != null ? this.status : Fine.FineStatus.UNPAID);\n        fine.setPaymentReference(this.paymentReference);\n        \n        return fine;\n    }\n}\n",
+  "classes": [
+    {
+      "name": "FineDto",
+      "methods": [
+        {
+          "name": "fromEntity",
+          "returnType": "FineDto",
+          "params": [
+            "Fine fine"
+          ]
+        },
+        {
+          "name": "toEntity",
+          "returnType": "Fine",
+          "params": []
+        }
+      ]
+    }
+  ],
+  "references": [
+    "lombok.Getter",
+    "jakarta.validation.constraints.DecimalMin",
+    "com.fasterxml.jackson.annotation.JsonFormat",
+    "java.math.BigDecimal",
+    "jakarta.validation.constraints.NotNull",
+    "lombok.Setter",
+    "java.time.LocalDate",
+    "FineDto",
+    "Fine",
+    "com.skax.library.model.Fine"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

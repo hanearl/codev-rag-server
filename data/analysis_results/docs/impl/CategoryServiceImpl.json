@@ -1,0 +1,101 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/service/impl/CategoryServiceImpl.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "impl",
+  "code": "package com.skax.library.service.impl;\n\nimport com.skax.library.dto.CategoryDto;\nimport com.skax.library.exception.ResourceNotFoundException;\nimport com.skax.library.mapper.CategoryMapper;\nimport com.skax.library.model.Category;\nimport com.skax.library.repository.CategoryRepository;\nimport com.skax.library.service.CategoryService;\nimport lombok.RequiredArgsConstructor;\nimport org.springframework.data.domain.Page;\nimport org.springframework.data.domain.Pageable;\nimport org.springframework.stereotype.Service;\nimport org.springframework.transaction.annotation.Transactional;\n\nimport java.util.List;\nimport java.util.stream.Collectors;\n\n@Service\n@RequiredArgsConstructor\npublic class CategoryServiceImpl implements CategoryService {\n    private final CategoryRepository categoryRepository;\n    private final CategoryMapper categoryMapper;\n\n    @Override\n    @Transactional\n    public CategoryDto createCategory(CategoryDto categoryDto) {\n        if (categoryRepository.existsByName(categoryDto.getName())) {\n            throw new IllegalStateException(\"Category with name \" + categoryDto.getName() + \" already exists\");\n        }\n        \n        Category category = categoryMapper.toEntity(categoryDto);\n        Category savedCategory = categoryRepository.save(category);\n        return categoryMapper.toDto(savedCategory);\n    }\n\n    @Override\n    @Transactional\n    public CategoryDto updateCategory(Long id, CategoryDto categoryDto) {\n        Category existingCategory = categoryRepository.findById(id)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Category not found with id: \" + id));\n        \n        if (!existingCategory.getName().equals(categoryDto.getName()) && \n            categoryRepository.existsByName(categoryDto.getName())) {\n            throw new IllegalStateException(\"Another category with name \" + categoryDto.getName() + \" already exists\");\n        }\n        \n        categoryMapper.updateCategoryFromDto(categoryDto, existingCategory);\n        Category updatedCategory = categoryRepository.save(existingCategory);\n        return categoryMapper.toDto(updatedCategory);\n    }\n\n    @Override\n    public CategoryDto getCategoryById(Long id) {\n        Category category = categoryRepository.findById(id)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Category not found with id: \" + id));\n        return categoryMapper.toDto(category);\n    }\n\n    @Override\n    public CategoryDto getCategoryByName(String name) {\n        Category category = categoryRepository.findByName(name)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Category not found with name: \" + name));\n        return categoryMapper.toDto(category);\n    }\n\n    @Override\n    public Page<CategoryDto> getAllCategories(Pageable pageable) {\n        return categoryRepository.findAll(pageable)\n                .map(categoryMapper::toDto);\n    }\n\n    @Override\n    public List<CategoryDto> searchCategories(String query) {\n        return categoryRepository.findByNameContainingIgnoreCase(query).stream()\n                .map(categoryMapper::toDto)\n                .collect(Collectors.toList());\n    }\n\n    @Override\n    @Transactional\n    public void deleteCategory(Long id) {\n        Category category = categoryRepository.findById(id)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Category not found with id: \" + id));\n        \n        if (!category.getBooks().isEmpty()) {\n            throw new IllegalStateException(\"Cannot delete category with associated books\");\n        }\n        \n        categoryRepository.delete(category);\n    }\n\n    @Override\n    public boolean existsByName(String name) {\n        return categoryRepository.existsByName(name);\n    }\n\n    @Override\n    public List<CategoryDto> getCategoriesByBookId(Long bookId) {\n        return categoryRepository.findByBooks_BookId(bookId).stream()\n                .map(categoryMapper::toDto)\n                .collect(Collectors.toList());\n    }\n}\n",
+  "classes": [
+    {
+      "name": "CategoryServiceImpl",
+      "methods": [
+        {
+          "name": "createCategory",
+          "returnType": "CategoryDto",
+          "params": [
+            "CategoryDto categoryDto"
+          ]
+        },
+        {
+          "name": "updateCategory",
+          "returnType": "CategoryDto",
+          "params": [
+            "Long id",
+            "CategoryDto categoryDto"
+          ]
+        },
+        {
+          "name": "getCategoryById",
+          "returnType": "CategoryDto",
+          "params": [
+            "Long id"
+          ]
+        },
+        {
+          "name": "getCategoryByName",
+          "returnType": "CategoryDto",
+          "params": [
+            "String name"
+          ]
+        },
+        {
+          "name": "getAllCategories",
+          "returnType": "Page",
+          "params": [
+            "Pageable pageable"
+          ]
+        },
+        {
+          "name": "searchCategories",
+          "returnType": "List",
+          "params": [
+            "String query"
+          ]
+        },
+        {
+          "name": "deleteCategory",
+          "returnType": "void",
+          "params": [
+            "Long id"
+          ]
+        },
+        {
+          "name": "existsByName",
+          "returnType": "boolean",
+          "params": [
+            "String name"
+          ]
+        },
+        {
+          "name": "getCategoriesByBookId",
+          "returnType": "List",
+          "params": [
+            "Long bookId"
+          ]
+        }
+      ]
+    }
+  ],
+  "references": [
+    "com.skax.library.model.Category",
+    "java.util.List",
+    "com.skax.library.repository.CategoryRepository",
+    "com.skax.library.service.CategoryService",
+    "lombok.RequiredArgsConstructor",
+    "org.springframework.stereotype.Service",
+    "List",
+    "com.skax.library.exception.ResourceNotFoundException",
+    "org.springframework.data.domain.Page",
+    "String",
+    "boolean",
+    "Pageable",
+    "org.springframework.transaction.annotation.Transactional",
+    "Page",
+    "com.skax.library.mapper.CategoryMapper",
+    "Long",
+    "org.springframework.data.domain.Pageable",
+    "com.skax.library.dto.CategoryDto",
+    "CategoryDto",
+    "java.util.stream.Collectors"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

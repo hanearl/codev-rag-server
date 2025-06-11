@@ -1,0 +1,115 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/controller/ReservationController.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "controller",
+  "code": "package com.skax.library.controller;\n\nimport com.skax.library.dto.ReservationDto;\nimport com.skax.library.service.ReservationService;\nimport io.swagger.v3.oas.annotations.Operation;\nimport io.swagger.v3.oas.annotations.tags.Tag;\nimport jakarta.validation.Valid;\nimport org.springframework.data.domain.Page;\nimport org.springframework.data.domain.Pageable;\nimport org.springframework.data.web.PageableDefault;\nimport org.springframework.http.HttpStatus;\nimport org.springframework.http.ResponseEntity;\nimport org.springframework.web.bind.annotation.*;\n\nimport java.util.List;\n\n@RestController\n@RequestMapping(\"/api/reservations\")\n@Tag(name = \"Reservation Management\", description = \"APIs for managing book reservations\")\npublic class ReservationController {\n    private final ReservationService reservationService;\n\n    public ReservationController(ReservationService reservationService) {\n        this.reservationService = reservationService;\n    }\n\n    @PostMapping\n    @Operation(summary = \"Create a new reservation\")\n    public ResponseEntity<ReservationDto> createReservation(\n            @Valid @RequestBody ReservationDto reservationDto) {\n        ReservationDto createdReservation = reservationService.createReservation(reservationDto);\n        return new ResponseEntity<>(createdReservation, HttpStatus.CREATED);\n    }\n\n    @PostMapping(\"/reserve\")\n    @Operation(summary = \"Reserve a book for a member\")\n    public ResponseEntity<ReservationDto> reserveBook(\n            @RequestParam Long bookId,\n            @RequestParam Long memberId) {\n        ReservationDto reservationDto = reservationService.reserveBook(bookId, memberId);\n        return new ResponseEntity<>(reservationDto, HttpStatus.CREATED);\n    }\n\n    @PutMapping(\"/{id}/cancel\")\n    @Operation(summary = \"Cancel a reservation\")\n    public ResponseEntity<ReservationDto> cancelReservation(@PathVariable Long id) {\n        ReservationDto cancelledReservation = reservationService.cancelReservation(id);\n        return ResponseEntity.ok(cancelledReservation);\n    }\n\n    @PutMapping(\"/{id}/fulfill\")\n    @Operation(summary = \"Mark a reservation as fulfilled\")\n    public ResponseEntity<ReservationDto> fulfillReservation(\n            @PathVariable Long id,\n            @RequestParam(required = false) Long loanId) {\n        ReservationDto fulfilledReservation = reservationService.fulfillReservation(id, loanId);\n        return ResponseEntity.ok(fulfilledReservation);\n    }\n\n    @GetMapping(\"/{id}\")\n    @Operation(summary = \"Get a reservation by ID\")\n    public ResponseEntity<ReservationDto> getReservationById(@PathVariable Long id) {\n        ReservationDto reservationDto = reservationService.getReservationById(id);\n        return ResponseEntity.ok(reservationDto);\n    }\n\n    @GetMapping\n    @Operation(summary = \"Get all reservations with optional filters\")\n    public ResponseEntity<Page<ReservationDto>> getAllReservations(\n            @PageableDefault(size = 20) Pageable pageable,\n            @RequestParam(required = false) Long memberId,\n            @RequestParam(required = false) Long bookId,\n            @RequestParam(required = false) String status) {\n        \n        Page<ReservationDto> reservations;\n        \n        if (memberId != null) {\n            reservations = reservationService.getReservationsByMemberId(memberId, pageable);\n        } else if (bookId != null) {\n            reservations = reservationService.getReservationsByBookId(bookId, pageable);\n        } else if (status != null) {\n            reservations = reservationService.getReservationsByStatus(status, pageable);\n        } else {\n            reservations = reservationService.getAllReservations(pageable);\n        }\n        \n        return ResponseEntity.ok(reservations);\n    }\n\n    @GetMapping(\"/active\")\n    @Operation(summary = \"Get all active reservations\")\n    public ResponseEntity<List<ReservationDto>> getActiveReservations() {\n        List<ReservationDto> activeReservations = reservationService.getActiveReservations();\n        return ResponseEntity.ok(activeReservations);\n    }\n\n    @GetMapping(\"/book/{bookId}/queue\")\n    @Operation(summary = \"Get the reservation queue for a book\")\n    public ResponseEntity<List<ReservationDto>> getReservationQueue(@PathVariable Long bookId) {\n        List<ReservationDto> queue = reservationService.getReservationQueue(bookId);\n        return ResponseEntity.ok(queue);\n    }\n\n    @GetMapping(\"/member/{memberId}/active\")\n    @Operation(summary = \"Get all active reservations for a member\")\n    public ResponseEntity<List<ReservationDto>> getActiveReservationsByMemberId(@PathVariable Long memberId) {\n        List<ReservationDto> activeReservations = reservationService.getActiveReservationsByMemberId(memberId);\n        return ResponseEntity.ok(activeReservations);\n    }\n\n    @PutMapping(\"/{id}/notify\")\n    @Operation(summary = \"Mark a reservation notification as sent\")\n    public ResponseEntity<ReservationDto> markNotificationAsSent(@PathVariable Long id) {\n        ReservationDto updatedReservation = reservationService.markNotificationAsSent(id);\n        return ResponseEntity.ok(updatedReservation);\n    }\n}\n",
+  "classes": [
+    {
+      "name": "ReservationController",
+      "methods": [
+        {
+          "name": "ReservationController",
+          "returnType": null,
+          "params": [
+            "ReservationService reservationService"
+          ]
+        },
+        {
+          "name": "createReservation",
+          "returnType": "ResponseEntity",
+          "params": [
+            "ReservationDto reservationDto"
+          ]
+        },
+        {
+          "name": "reserveBook",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long bookId",
+            "Long memberId"
+          ]
+        },
+        {
+          "name": "cancelReservation",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long id"
+          ]
+        },
+        {
+          "name": "fulfillReservation",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long id",
+            "Long loanId"
+          ]
+        },
+        {
+          "name": "getReservationById",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long id"
+          ]
+        },
+        {
+          "name": "getAllReservations",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Pageable pageable",
+            "Long memberId",
+            "Long bookId",
+            "String status"
+          ]
+        },
+        {
+          "name": "getActiveReservations",
+          "returnType": "ResponseEntity",
+          "params": []
+        },
+        {
+          "name": "getReservationQueue",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long bookId"
+          ]
+        },
+        {
+          "name": "getActiveReservationsByMemberId",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long memberId"
+          ]
+        },
+        {
+          "name": "markNotificationAsSent",
+          "returnType": "ResponseEntity",
+          "params": [
+            "Long id"
+          ]
+        }
+      ]
+    }
+  ],
+  "references": [
+    "com.skax.library.dto.ReservationDto",
+    "String",
+    "com.skax.library.service.ReservationService",
+    "java.util.List",
+    "org.springframework.data.domain.Page",
+    "io.swagger.v3.oas.annotations.tags.Tag",
+    "Pageable",
+    "jakarta.validation.Valid",
+    "org.springframework.web.bind.annotation",
+    "Long",
+    "ResponseEntity",
+    "org.springframework.data.web.PageableDefault",
+    "org.springframework.data.domain.Pageable",
+    "org.springframework.http.ResponseEntity",
+    "ReservationDto",
+    "org.springframework.http.HttpStatus",
+    "io.swagger.v3.oas.annotations.Operation",
+    "ReservationService"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

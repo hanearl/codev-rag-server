@@ -1,0 +1,35 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/dto/CategoryDto.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "dto",
+  "code": "package com.skax.library.dto;\n\nimport com.skax.library.model.Category;\nimport jakarta.validation.constraints.NotBlank;\nimport lombok.Getter;\nimport lombok.Setter;\n\n@Getter\n@Setter\npublic class CategoryDto extends BaseDto {\n    @NotBlank(message = \"Name is required\")\n    private String name;\n    \n    private String description;\n    \n    // For responses\n    private Long bookCount;\n    \n    public static CategoryDto fromEntity(Category category) {\n        if (category == null) {\n            return null;\n        }\n        \n        CategoryDto dto = new CategoryDto();\n        dto.setId(category.getId());\n        dto.setName(category.getName());\n        dto.setDescription(category.getDescription());\n        dto.setCreatedAt(category.getCreatedAt());\n        dto.setUpdatedAt(category.getUpdatedAt());\n        \n        if (category.getBooks() != null) {\n            dto.setBookCount((long) category.getBooks().size());\n        }\n        \n        return dto;\n    }\n    \n    public Category toEntity() {\n        Category category = new Category();\n        category.setName(this.name);\n        category.setDescription(this.description);\n        \n        return category;\n    }\n}\n",
+  "classes": [
+    {
+      "name": "CategoryDto",
+      "methods": [
+        {
+          "name": "fromEntity",
+          "returnType": "CategoryDto",
+          "params": [
+            "Category category"
+          ]
+        },
+        {
+          "name": "toEntity",
+          "returnType": "Category",
+          "params": []
+        }
+      ]
+    }
+  ],
+  "references": [
+    "com.skax.library.model.Category",
+    "lombok.Getter",
+    "lombok.Setter",
+    "Category",
+    "CategoryDto",
+    "jakarta.validation.constraints.NotBlank"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

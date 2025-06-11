@@ -1,0 +1,249 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# FastAPI 코딩 표준 및 베스트 프랙티스
+
+## 🎨 코딩 스타일 가이드
+
+### 1. 타입 힌트 필수 사용
+모든 함수와 메서드에는 타입 힌트를 명시해야 합니다.
+
+```python
+from typing import List, Optional
+from pydantic import BaseModel
+
+def get_users(limit: int = 10) -> List[UserResponse]:
+    pass
+
+async def create_user(user_data: UserCreate) -> UserResponse:
+    pass
+```
+
+### 2. Pydantic 모델 네이밍 컨벤션
+- **Request 모델**: `{Entity}Create`, `{Entity}Update`
+- **Response 모델**: `{Entity}Response`, `{Entity}Detail`
+- **Base 모델**: `{Entity}Base`
+
+```python
+class UserBase(BaseModel):
+    name: str
+    email: str
+
+class UserCreate(UserBase):
+    password: str
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+
+class UserResponse(UserBase):
+    id: int
+    created_at: datetime
+```
+
+### 3. 비동기 처리 가이드라인
+- 데이터베이스 작업은 비동기로 처리
+- I/O 작업이 포함된 경우 `async/await` 사용
+- CPU 집약적 작업은 동기 함수로 처리
+
+```python
+async def get_user_by_id(user_id: int) -> Optional[User]:
+    # DB 작업은 비동기
+    pass
+
+def calculate_user_score(user_data: dict) -> float:
+    # CPU 집약적 작업은 동기
+    pass
+```
+
+## 🔒 보안 베스트 프랙티스
+
+### 1. 의존성 주입을 통한 인증/인가
+```python
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer
+
+security = HTTPBearer()
+
+async def get_current_user(token: str = Depends(security)) -> User:
+    # 토큰 검증 로직
+    pass
+
+@router.get("/protected")
+async def protected_endpoint(current_user: User = Depends(get_current_user)):
+    pass
+```
+
+### 2. 환경 변수 관리
+```python
+from pydantic import BaseSettings
+
+class Settings(BaseSettings):
+    database_url: str
+    secret_key: str
+    
+    class Config:
+        env_file = ".env"
+
+settings = Settings()
+```
+
+## 📝 문서화 규칙
+
+### 1. API 엔드포인트 문서화
+```python
+@router.post("/users", response_model=UserResponse, status_code=201)
+async def create_user(
+    user_data: UserCreate,
+    db: Session = Depends(get_db)
+) -> UserResponse:
+    """
+    새로운 사용자를 생성합니다.
+    
+    - **name**: 사용자 이름 (필수)
+    - **email**: 이메일 주소 (필수, 유니크)
+    - **password**: 비밀번호 (필수, 최소 8자)
+    
+    Returns:
+        생성된 사용자 정보
+    """
+    pass
+```
+
+### 2. 함수/클래스 Docstring
+```python
+def validate_email(email: str) -> bool:
+    """
+    이메일 주소 형식을 검증합니다.
+    
+    Args:
+        email: 검증할 이메일 주소
+        
+    Returns:
+        유효한 이메일인 경우 True, 그렇지 않으면 False
+        
+    Raises:
+        ValueError: 이메일 형식이 올바르지 않은 경우
+    """
+    pass
+```
+
+## 🧪 테스트 가이드라인
+
+### 1. 테스트 파일 구조
+```
+tests/
+├── conftest.py           ← 공통 fixture
+├── test_users/
+│   ├── test_router.py    ← API 엔드포인트 테스트
+│   ├── test_service.py   ← 비즈니스 로직 테스트
+│   └── test_repository.py ← DB 접근 로직 테스트
+```
+
+### 2. 테스트 네이밍 컨벤션
+```python
+def test_create_user_success():
+    """정상적인 사용자 생성 테스트"""
+    pass
+
+def test_create_user_with_duplicate_email_should_fail():
+    """중복 이메일로 사용자 생성 시 실패 테스트"""
+    pass
+```
+
+## 🚨 오류 처리 패턴
+
+### 1. 커스텀 예외 정의
+```python
+class AppException(Exception):
+    """애플리케이션 기본 예외"""
+    pass
+
+class UserNotFoundException(AppException):
+    """사용자를 찾을 수 없음"""
+    pass
+
+class DuplicateEmailException(AppException):
+    """중복된 이메일"""
+    pass
+```
+
+### 2. 예외 핸들러
+```python
+from fastapi import HTTPException, status
+
+@app.exception_handler(UserNotFoundException)
+async def user_not_found_handler(request, exc):
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="사용자를 찾을 수 없습니다"
+    )
+```
+
+## 📊 로깅 표준
+
+### 1. 로깅 설정
+```python
+import logging
+import sys
+
+# 로깅 설정
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler("app.log")
+    ]
+)
+
+logger = logging.getLogger(__name__)
+```
+
+### 2. 로깅 사용 예시
+```python
+async def create_user(user_data: UserCreate) -> UserResponse:
+    logger.info(f"새 사용자 생성 요청: {user_data.email}")
+    
+    try:
+        user = await user_service.create_user(user_data)
+        logger.info(f"사용자 생성 완료: {user.id}")
+        return user
+    except Exception as e:
+        logger.error(f"사용자 생성 실패: {str(e)}")
+        raise
+```
+
+## 🔧 성능 최적화 가이드
+
+### 1. 데이터베이스 쿼리 최적화
+- N+1 쿼리 문제 방지를 위한 `joinedload` 사용
+- 필요한 필드만 선택하는 쿼리 작성
+- 인덱스 활용 고려
+
+### 2. 캐싱 전략
+```python
+from functools import lru_cache
+
+@lru_cache(maxsize=128)
+def get_settings() -> Settings:
+    return Settings()
+```
+
+### 3. 페이지네이션 구현
+```python
+class PaginatedResponse(BaseModel):
+    items: List[Any]
+    total: int
+    page: int
+    size: int
+    pages: int
+
+@router.get("/users", response_model=PaginatedResponse)
+async def get_users(page: int = 1, size: int = 10):
+    pass
+```
+
+이러한 규칙들을 따르면 일관성 있고 유지보수 가능한 FastAPI 애플리케이션을 개발할 수 있습니다.

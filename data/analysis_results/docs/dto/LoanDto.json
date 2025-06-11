@@ -1,0 +1,38 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/dto/LoanDto.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "dto",
+  "code": "package com.skax.library.dto;\n\nimport com.fasterxml.jackson.annotation.JsonFormat;\nimport com.skax.library.model.Loan;\nimport jakarta.validation.constraints.Future;\nimport jakarta.validation.constraints.NotNull;\nimport lombok.Getter;\nimport lombok.Setter;\n\nimport java.time.LocalDate;\n\n@Getter\n@Setter\npublic class LoanDto extends BaseDto {\n    private Long bookId;\n    private BookDto book;\n    \n    private Long memberId;\n    private MemberDto member;\n    \n    @JsonFormat(pattern = \"yyyy-MM-dd\")\n    private LocalDate loanDate;\n    \n    @Future(message = \"Due date must be in the future\")\n    @JsonFormat(pattern = \"yyyy-MM-dd\")\n    private LocalDate dueDate;\n    \n    @JsonFormat(pattern = \"yyyy-MM-dd\")\n    private LocalDate returnDate;\n    \n    private Integer extendedCount;\n    private Loan.LoanStatus status;\n    \n    // For responses\n    private Boolean isOverdue;\n    private FineDto fine;\n    \n    public static LoanDto fromEntity(Loan loan) {\n        if (loan == null) {\n            return null;\n        }\n        \n        LoanDto dto = new LoanDto();\n        dto.setId(loan.getId());\n        \n        if (loan.getBook() != null) {\n            dto.setBookId(loan.getBook().getId());\n            dto.setBook(BookDto.fromEntity(loan.getBook()));\n        }\n        \n        if (loan.getMember() != null) {\n            dto.setMemberId(loan.getMember().getId());\n            dto.setMember(MemberDto.fromEntity(loan.getMember()));\n        }\n        \n        dto.setLoanDate(loan.getLoanDate());\n        dto.setDueDate(loan.getDueDate());\n        dto.setReturnDate(loan.getReturnDate());\n        dto.setExtendedCount(loan.getExtendedCount());\n        dto.setStatus(loan.getStatus());\n        dto.setCreatedAt(loan.getCreatedAt());\n        dto.setUpdatedAt(loan.getUpdatedAt());\n        \n        // Check if loan is overdue\n        if (loan.getStatus() == Loan.LoanStatus.ACTIVE && loan.getDueDate().isBefore(LocalDate.now())) {\n            dto.setIsOverdue(true);\n        } else {\n            dto.setIsOverdue(false);\n        }\n        \n        return dto;\n    }\n    \n    public Loan toEntity() {\n        Loan loan = new Loan();\n        loan.setLoanDate(this.loanDate != null ? this.loanDate : LocalDate.now());\n        loan.setDueDate(this.dueDate);\n        loan.setReturnDate(this.returnDate);\n        loan.setExtendedCount(this.extendedCount != null ? this.extendedCount : 0);\n        loan.setStatus(this.status != null ? this.status : Loan.LoanStatus.ACTIVE);\n        \n        return loan;\n    }\n}\n",
+  "classes": [
+    {
+      "name": "LoanDto",
+      "methods": [
+        {
+          "name": "fromEntity",
+          "returnType": "LoanDto",
+          "params": [
+            "Loan loan"
+          ]
+        },
+        {
+          "name": "toEntity",
+          "returnType": "Loan",
+          "params": []
+        }
+      ]
+    }
+  ],
+  "references": [
+    "lombok.Getter",
+    "com.fasterxml.jackson.annotation.JsonFormat",
+    "jakarta.validation.constraints.NotNull",
+    "jakarta.validation.constraints.Future",
+    "lombok.Setter",
+    "com.skax.library.model.Loan",
+    "Loan",
+    "java.time.LocalDate",
+    "LoanDto"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

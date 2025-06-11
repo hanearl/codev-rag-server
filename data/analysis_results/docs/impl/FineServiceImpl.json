@@ -1,0 +1,213 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/service/impl/FineServiceImpl.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "impl",
+  "code": "package com.skax.library.service.impl;\n\nimport com.skax.library.dto.FineDto;\nimport com.skax.library.exception.InvalidPaymentException;\nimport com.skax.library.exception.ResourceNotFoundException;\nimport com.skax.library.model.*;\nimport com.skax.library.repository.FineRepository;\nimport com.skax.library.repository.LoanRepository;\nimport com.skax.library.repository.MemberRepository;\nimport com.skax.library.service.FineService;\nimport lombok.RequiredArgsConstructor;\nimport org.springframework.data.domain.Page;\nimport org.springframework.data.domain.Pageable;\nimport org.springframework.scheduling.annotation.Scheduled;\nimport org.springframework.stereotype.Service;\nimport org.springframework.transaction.annotation.Transactional;\n\nimport java.math.BigDecimal;\nimport java.time.LocalDate;\nimport java.util.List;\nimport java.util.stream.Collectors;\n\n@Service\n@RequiredArgsConstructor\npublic class FineServiceImpl implements FineService {\n    private final FineRepository fineRepository;\n    private final LoanRepository loanRepository;\n    private final MemberRepository memberRepository;\n\n    @Override\n    @Transactional\n    public FineDto createFine(FineDto fineDto) {\n        Loan loan = loanRepository.findById(fineDto.getLoanId())\n                .orElseThrow(() -> new ResourceNotFoundException(\"Loan not found with id: \" + fineDto.getLoanId()));\n        \n        Member member = null;\n        if (fineDto.getMemberId() != null) {\n            member = memberRepository.findById(fineDto.getMemberId())\n                    .orElseThrow(() -> new ResourceNotFoundException(\"Member not found with id: \" + fineDto.getMemberId()));\n        } else {\n            member = loan.getMember();\n        }\n        \n        // Check if a fine already exists for this loan\n        fineRepository.findByLoanId(loan.getId()).ifPresent(fine -> {\n            throw new IllegalStateException(\"A fine already exists for this loan\");\n        });\n        \n        Fine fine = fineDto.toEntity();\n        fine.setLoan(loan);\n        fine.setMember(member);\n        \n        if (fine.getFineDate() == null) {\n            fine.setFineDate(LocalDate.now());\n        }\n        \n        return FineDto.fromEntity(fineRepository.save(fine));\n    }\n\n    @Override\n    @Transactional\n    public FineDto createFine(Long loanId, String reason, BigDecimal amount, LocalDate dueDate) {\n        Loan loan = loanRepository.findById(loanId)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Loan not found with id: \" + loanId));\n        \n        // Check if a fine already exists for this loan\n        fineRepository.findByLoanId(loanId).ifPresent(fine -> {\n            throw new IllegalStateException(\"A fine already exists for this loan\");\n        });\n        \n        Fine fine = Fine.builder()\n                .loan(loan)\n                .member(loan.getMember())\n                .amount(amount)\n                .fineDate(LocalDate.now())\n                .dueDate(dueDate)\n                .reason(reason)\n                .status(Fine.FineStatus.UNPAID)\n                .build();\n        \n        return FineDto.fromEntity(fineRepository.save(fine));\n    }\n    \n    @Override\n    @Transactional\n    public FineDto createFineForLoan(Long loanId, BigDecimal amount, String reason) {\n        return createFine(loanId, reason, amount, LocalDate.now().plusDays(30));\n    }\n\n    @Override\n    @Transactional\n    public FineDto payFine(Long fineId, String paymentReference) {\n        Fine fine = findFineById(fineId);\n        \n        if (fine.getStatus() == Fine.FineStatus.PAID) {\n            throw new InvalidPaymentException(\"Fine has already been paid\");\n        }\n        \n        if (fine.getStatus() == Fine.FineStatus.WAIVED) {\n            throw new InvalidPaymentException(\"Cannot pay a waived fine\");\n        }\n        \n        fine.setStatus(Fine.FineStatus.PAID);\n        fine.setPaidDate(LocalDate.now());\n        fine.setPaymentReference(paymentReference);\n        \n        return FineDto.fromEntity(fineRepository.save(fine));\n    }\n    \n    @Override\n    @Transactional\n    public FineDto recordPayment(Long fineId, BigDecimal amount, String paymentReference) {\n        Fine fine = findFineById(fineId);\n        \n        if (fine.getStatus() == Fine.FineStatus.PAID) {\n            throw new InvalidPaymentException(\"Fine has already been paid in full\");\n        }\n        \n        if (fine.getStatus() == Fine.FineStatus.WAIVED) {\n            throw new InvalidPaymentException(\"Cannot pay a waived fine\");\n        }\n        \n        // 전체 금액 지불\n        if (amount.compareTo(fine.getAmount()) >= 0) {\n            fine.setStatus(Fine.FineStatus.PAID);\n            fine.setPaidDate(LocalDate.now());\n        } else {\n            // 부분 지불\n            fine.setStatus(Fine.FineStatus.PARTIALLY_PAID);\n        }\n        \n        fine.setPaymentReference(paymentReference);\n        \n        return FineDto.fromEntity(fineRepository.save(fine));\n    }\n\n    @Override\n    public FineDto getFineById(Long id) {\n        return FineDto.fromEntity(findFineById(id));\n    }\n    \n    private Fine findFineById(Long id) {\n        return fineRepository.findById(id)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Fine not found with id: \" + id));\n    }\n    \n    @Override\n    public FineDto getFineByLoanId(Long loanId) {\n        return fineRepository.findByLoanId(loanId)\n                .map(FineDto::fromEntity)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Fine not found for loan id: \" + loanId));\n    }\n\n    @Override\n    public List<FineDto> getFinesByMemberId(Long memberId) {\n        memberRepository.findById(memberId)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Member not found with id: \" + memberId));\n        return fineRepository.findByMemberId(memberId).stream()\n                .map(FineDto::fromEntity)\n                .collect(Collectors.toList());\n    }\n    \n    @Override\n    public Page<FineDto> getFinesByMemberId(Long memberId, Pageable pageable) {\n        memberRepository.findById(memberId)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Member not found with id: \" + memberId));\n        // 페이징 구현 - 실제로는 Repository에서 PageRequest를 받는 메서드가 구현되어야 함\n        // 임시 구현으로 Page.empty() 반환\n        return Page.empty();\n    }\n\n    @Override\n    public List<FineDto> getUnpaidFinesByMemberId(Long memberId) {\n        return fineRepository.findUnpaidFinesByMemberId(memberId).stream()\n                .map(FineDto::fromEntity)\n                .collect(Collectors.toList());\n    }\n    \n    @Override\n    public List<FineDto> getUnpaidFines() {\n        return fineRepository.findAll().stream()\n                .filter(fine -> fine.getStatus() == Fine.FineStatus.UNPAID || fine.getStatus() == Fine.FineStatus.PARTIALLY_PAID)\n                .map(FineDto::fromEntity)\n                .collect(Collectors.toList());\n    }\n\n    @Override\n    public BigDecimal getTotalUnpaidFinesByMemberId(Long memberId) {\n        return fineRepository.getTotalUnpaidFinesByMemberId(memberId);\n    }\n    \n    @Override\n    public BigDecimal getTotalOwedByMember(Long memberId) {\n        return getTotalUnpaidFinesByMemberId(memberId);\n    }\n\n    @Override\n    public List<FineDto> getOverdueFines() {\n        return fineRepository.findOverdueFines(LocalDate.now()).stream()\n                .map(FineDto::fromEntity)\n                .collect(Collectors.toList());\n    }\n    \n    @Override\n    public Page<FineDto> getOverdueFines(Pageable pageable) {\n        // 페이징 구현 - 실제로는 Repository에서 PageRequest를 받는 메서드가 구현되어야 함\n        // 임시 구현으로 Page.empty() 반환\n        return Page.empty();\n    }\n\n    @Override\n    @Transactional\n    public FineDto waiveFine(Long fineId, String reason) {\n        Fine fine = findFineById(fineId);\n        \n        if (fine.getStatus() == Fine.FineStatus.PAID) {\n            throw new IllegalStateException(\"Cannot waive a paid fine\");\n        }\n        \n        fine.setStatus(Fine.FineStatus.WAIVED);\n        fine.setReason(fine.getReason() + \" (Waived: \" + reason + \")\");\n        \n        return FineDto.fromEntity(fineRepository.save(fine));\n    }\n\n    @Override\n    @Transactional\n    public FineDto updateFineAmount(Long fineId, BigDecimal newAmount) {\n        if (newAmount.compareTo(BigDecimal.ZERO) <= 0) {\n            throw new IllegalArgumentException(\"Fine amount must be greater than zero\");\n        }\n        \n        Fine fine = findFineById(fineId);\n        \n        if (fine.getStatus() == Fine.FineStatus.PAID) {\n            throw new IllegalStateException(\"Cannot update amount of a paid fine\");\n        }\n        \n        fine.setAmount(newAmount);\n        \n        return FineDto.fromEntity(fineRepository.save(fine));\n    }\n    \n    @Override\n    @Transactional\n    public FineDto updateFine(Long fineId, FineDto fineDto) {\n        Fine existingFine = findFineById(fineId);\n        \n        if (existingFine.getStatus() == Fine.FineStatus.PAID && fineDto.getStatus() != Fine.FineStatus.PAID) {\n            throw new IllegalStateException(\"Cannot change status of a paid fine\");\n        }\n        \n        // 업데이트 가능한 필드만 변경\n        if (fineDto.getAmount() != null) {\n            existingFine.setAmount(fineDto.getAmount());\n        }\n        \n        if (fineDto.getDueDate() != null) {\n            existingFine.setDueDate(fineDto.getDueDate());\n        }\n        \n        if (fineDto.getReason() != null) {\n            existingFine.setReason(fineDto.getReason());\n        }\n        \n        if (fineDto.getStatus() != null) {\n            existingFine.setStatus(fineDto.getStatus());\n        }\n        \n        if (fineDto.getPaymentReference() != null) {\n            existingFine.setPaymentReference(fineDto.getPaymentReference());\n        }\n        \n        return FineDto.fromEntity(fineRepository.save(existingFine));\n    }\n\n    @Override\n    @Scheduled(cron = \"0 0 0 * * ?\") // Run daily at midnight\n    @Transactional\n    public void processOverdueFines() {\n        LocalDate today = LocalDate.now();\n        List<Fine> overdueFines = fineRepository.findOverdueFines(today);\n        \n        for (Fine fine : overdueFines) {\n            if (fine.getStatus() == Fine.FineStatus.UNPAID || \n                fine.getStatus() == Fine.FineStatus.PARTIALLY_PAID) {\n                fine.setStatus(Fine.FineStatus.OVERDUE);\n                fineRepository.save(fine);\n            }\n        }\n    }\n\n    @Override\n    public BigDecimal getTotalFinesCollected(LocalDate startDate, LocalDate endDate) {\n        if (startDate.isAfter(endDate)) {\n            throw new IllegalArgumentException(\"Start date must be before or equal to end date\");\n        }\n        \n        BigDecimal total = fineRepository.getTotalFinesPaidBetweenDates(startDate, endDate);\n        return total != null ? total : BigDecimal.ZERO;\n    }\n    \n    @Override\n    public Page<FineDto> getAllFines(Pageable pageable) {\n        // 페이징 구현 - 실제로는 Repository에서 PageRequest를 받는 메서드가 구현되어야 함\n        // 임시 구현으로 Page.empty() 반환\n        return Page.empty();\n    }\n    \n    @Override\n    public Page<FineDto> getFinesByStatus(String status, Pageable pageable) {\n        Fine.FineStatus fineStatus = Fine.FineStatus.valueOf(status.toUpperCase());\n        // 페이징 구현 - 실제로는 Repository에서 PageRequest를 받는 메서드가 구현되어야 함\n        // 임시 구현으로 Page.empty() 반환\n        return Page.empty();\n    }\n}\n",
+  "classes": [
+    {
+      "name": "FineServiceImpl",
+      "methods": [
+        {
+          "name": "createFine",
+          "returnType": "FineDto",
+          "params": [
+            "FineDto fineDto"
+          ]
+        },
+        {
+          "name": "createFine",
+          "returnType": "FineDto",
+          "params": [
+            "Long loanId",
+            "String reason",
+            "BigDecimal amount",
+            "LocalDate dueDate"
+          ]
+        },
+        {
+          "name": "createFineForLoan",
+          "returnType": "FineDto",
+          "params": [
+            "Long loanId",
+            "BigDecimal amount",
+            "String reason"
+          ]
+        },
+        {
+          "name": "payFine",
+          "returnType": "FineDto",
+          "params": [
+            "Long fineId",
+            "String paymentReference"
+          ]
+        },
+        {
+          "name": "recordPayment",
+          "returnType": "FineDto",
+          "params": [
+            "Long fineId",
+            "BigDecimal amount",
+            "String paymentReference"
+          ]
+        },
+        {
+          "name": "getFineById",
+          "returnType": "FineDto",
+          "params": [
+            "Long id"
+          ]
+        },
+        {
+          "name": "findFineById",
+          "returnType": "Fine",
+          "params": [
+            "Long id"
+          ]
+        },
+        {
+          "name": "getFineByLoanId",
+          "returnType": "FineDto",
+          "params": [
+            "Long loanId"
+          ]
+        },
+        {
+          "name": "getFinesByMemberId",
+          "returnType": "List",
+          "params": [
+            "Long memberId"
+          ]
+        },
+        {
+          "name": "getFinesByMemberId",
+          "returnType": "Page",
+          "params": [
+            "Long memberId",
+            "Pageable pageable"
+          ]
+        },
+        {
+          "name": "getUnpaidFinesByMemberId",
+          "returnType": "List",
+          "params": [
+            "Long memberId"
+          ]
+        },
+        {
+          "name": "getUnpaidFines",
+          "returnType": "List",
+          "params": []
+        },
+        {
+          "name": "getTotalUnpaidFinesByMemberId",
+          "returnType": "BigDecimal",
+          "params": [
+            "Long memberId"
+          ]
+        },
+        {
+          "name": "getTotalOwedByMember",
+          "returnType": "BigDecimal",
+          "params": [
+            "Long memberId"
+          ]
+        },
+        {
+          "name": "getOverdueFines",
+          "returnType": "List",
+          "params": []
+        },
+        {
+          "name": "getOverdueFines",
+          "returnType": "Page",
+          "params": [
+            "Pageable pageable"
+          ]
+        },
+        {
+          "name": "waiveFine",
+          "returnType": "FineDto",
+          "params": [
+            "Long fineId",
+            "String reason"
+          ]
+        },
+        {
+          "name": "updateFineAmount",
+          "returnType": "FineDto",
+          "params": [
+            "Long fineId",
+            "BigDecimal newAmount"
+          ]
+        },
+        {
+          "name": "updateFine",
+          "returnType": "FineDto",
+          "params": [
+            "Long fineId",
+            "FineDto fineDto"
+          ]
+        },
+        {
+          "name": "processOverdueFines",
+          "returnType": "void",
+          "params": []
+        },
+        {
+          "name": "getTotalFinesCollected",
+          "returnType": "BigDecimal",
+          "params": [
+            "LocalDate startDate",
+            "LocalDate endDate"
+          ]
+        },
+        {
+          "name": "getAllFines",
+          "returnType": "Page",
+          "params": [
+            "Pageable pageable"
+          ]
+        },
+        {
+          "name": "getFinesByStatus",
+          "returnType": "Page",
+          "params": [
+            "String status",
+            "Pageable pageable"
+          ]
+        }
+      ]
+    }
+  ],
+  "references": [
+    "java.util.List",
+    "com.skax.library.repository.MemberRepository",
+    "org.springframework.scheduling.annotation.Scheduled",
+    "com.skax.library.dto.FineDto",
+    "lombok.RequiredArgsConstructor",
+    "FineDto",
+    "Fine",
+    "org.springframework.stereotype.Service",
+    "List",
+    "LocalDate",
+    "com.skax.library.exception.ResourceNotFoundException",
+    "org.springframework.data.domain.Page",
+    "com.skax.library.exception.InvalidPaymentException",
+    "com.skax.library.repository.FineRepository",
+    "BigDecimal",
+    "String",
+    "com.skax.library.repository.LoanRepository",
+    "Pageable",
+    "org.springframework.transaction.annotation.Transactional",
+    "java.math.BigDecimal",
+    "Page",
+    "com.skax.library.model",
+    "java.time.LocalDate",
+    "Long",
+    "org.springframework.data.domain.Pageable",
+    "com.skax.library.service.FineService",
+    "java.util.stream.Collectors"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}

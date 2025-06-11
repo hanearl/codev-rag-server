@@ -1,0 +1,118 @@
+{
+  "filePath": "/Users/hanearl/dev/projects/codev-v2/sample-pjt/springboot-sample-pjt/src/main/java/com/skax/library/service/impl/MemberServiceImpl.java",
+  "language": "java",
+  "framework": "spring-boot",
+  "module": "impl",
+  "code": "package com.skax.library.service.impl;\n\nimport com.skax.library.dto.MemberDto;\nimport com.skax.library.exception.ResourceNotFoundException;\nimport com.skax.library.mapper.MemberMapper;\nimport com.skax.library.model.Member;\nimport com.skax.library.repository.LoanRepository;\nimport com.skax.library.repository.MemberRepository;\nimport com.skax.library.service.MemberService;\nimport lombok.RequiredArgsConstructor;\nimport org.springframework.data.domain.Page;\nimport org.springframework.data.domain.Pageable;\nimport org.springframework.stereotype.Service;\nimport org.springframework.transaction.annotation.Transactional;\n\nimport java.util.List;\nimport java.util.stream.Collectors;\n\n@Service\n@RequiredArgsConstructor\npublic class MemberServiceImpl implements MemberService {\n    private final MemberRepository memberRepository;\n    private final LoanRepository loanRepository;\n    private final MemberMapper memberMapper;\n\n    @Override\n    @Transactional\n    public MemberDto createMember(MemberDto memberDto) {\n        if (memberRepository.existsByEmail(memberDto.getEmail())) {\n            throw new IllegalStateException(\"Member with email \" + memberDto.getEmail() + \" already exists\");\n        }\n        \n        Member member = memberMapper.toEntity(memberDto);\n        Member savedMember = memberRepository.save(member);\n        return memberMapper.toDto(savedMember);\n    }\n\n    @Override\n    @Transactional\n    public MemberDto updateMember(Long id, MemberDto memberDto) {\n        Member existingMember = memberRepository.findById(id)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Member not found with id: \" + id));\n        \n        if (!existingMember.getEmail().equals(memberDto.getEmail()) && \n            memberRepository.existsByEmail(memberDto.getEmail())) {\n            throw new IllegalStateException(\"Another member with email \" + memberDto.getEmail() + \" already exists\");\n        }\n        \n        memberMapper.updateMemberFromDto(memberDto, existingMember);\n        Member updatedMember = memberRepository.save(existingMember);\n        return memberMapper.toDto(updatedMember);\n    }\n\n    @Override\n    public MemberDto getMemberById(Long id) {\n        Member member = memberRepository.findById(id)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Member not found with id: \" + id));\n        return memberMapper.toDto(member);\n    }\n\n    @Override\n    public MemberDto getMemberByEmail(String email) {\n        Member member = memberRepository.findByEmail(email)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Member not found with email: \" + email));\n        return memberMapper.toDto(member);\n    }\n\n    @Override\n    public Page<MemberDto> getAllMembers(Pageable pageable) {\n        return memberRepository.findAll(pageable)\n                .map(memberMapper::toDto);\n    }\n\n    @Override\n    public Page<MemberDto> searchMembers(String query, Pageable pageable) {\n        return memberRepository.search(query, pageable)\n                .map(memberMapper::toDto);\n    }\n\n    @Override\n    @Transactional\n    public void deleteMember(Long id) {\n        Member member = memberRepository.findById(id)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Member not found with id: \" + id));\n        int activeLoans = loanRepository.countActiveLoansByMemberId(id);\n        \n        if (activeLoans > 0) {\n            throw new IllegalStateException(\"Cannot delete member with active loans\");\n        }\n        \n        memberRepository.delete(member);\n    }\n\n    @Override\n    @Transactional\n    public MemberDto updateMemberStatus(Long id, Member.MemberStatus status) {\n        Member member = memberRepository.findById(id)\n                .orElseThrow(() -> new ResourceNotFoundException(\"Member not found with id: \" + id));\n        member.setStatus(status);\n        Member updatedMember = memberRepository.save(member);\n        return memberMapper.toDto(updatedMember);\n    }\n\n    @Override\n    public boolean existsByEmail(String email) {\n        return memberRepository.existsByEmail(email);\n    }\n\n    @Override\n    public List<MemberDto> getActiveMembers() {\n        return memberRepository.findActiveMembers().stream()\n                .map(memberMapper::toDto)\n                .collect(Collectors.toList());\n    }\n\n    @Override\n    public int getBorrowedBooksCount(Long memberId) {\n        return loanRepository.countActiveLoansByMemberId(memberId);\n    }\n}\n",
+  "classes": [
+    {
+      "name": "MemberServiceImpl",
+      "methods": [
+        {
+          "name": "createMember",
+          "returnType": "MemberDto",
+          "params": [
+            "MemberDto memberDto"
+          ]
+        },
+        {
+          "name": "updateMember",
+          "returnType": "MemberDto",
+          "params": [
+            "Long id",
+            "MemberDto memberDto"
+          ]
+        },
+        {
+          "name": "getMemberById",
+          "returnType": "MemberDto",
+          "params": [
+            "Long id"
+          ]
+        },
+        {
+          "name": "getMemberByEmail",
+          "returnType": "MemberDto",
+          "params": [
+            "String email"
+          ]
+        },
+        {
+          "name": "getAllMembers",
+          "returnType": "Page",
+          "params": [
+            "Pageable pageable"
+          ]
+        },
+        {
+          "name": "searchMembers",
+          "returnType": "Page",
+          "params": [
+            "String query",
+            "Pageable pageable"
+          ]
+        },
+        {
+          "name": "deleteMember",
+          "returnType": "void",
+          "params": [
+            "Long id"
+          ]
+        },
+        {
+          "name": "updateMemberStatus",
+          "returnType": "MemberDto",
+          "params": [
+            "Long id",
+            "Member status"
+          ]
+        },
+        {
+          "name": "existsByEmail",
+          "returnType": "boolean",
+          "params": [
+            "String email"
+          ]
+        },
+        {
+          "name": "getActiveMembers",
+          "returnType": "List",
+          "params": []
+        },
+        {
+          "name": "getBorrowedBooksCount",
+          "returnType": "int",
+          "params": [
+            "Long memberId"
+          ]
+        }
+      ]
+    }
+  ],
+  "references": [
+    "java.util.List",
+    "MemberDto",
+    "com.skax.library.repository.MemberRepository",
+    "com.skax.library.dto.MemberDto",
+    "int",
+    "com.skax.library.model.Member",
+    "com.skax.library.mapper.MemberMapper",
+    "Member",
+    "lombok.RequiredArgsConstructor",
+    "org.springframework.stereotype.Service",
+    "List",
+    "com.skax.library.exception.ResourceNotFoundException",
+    "org.springframework.data.domain.Page",
+    "com.skax.library.service.MemberService",
+    "String",
+    "boolean",
+    "com.skax.library.repository.LoanRepository",
+    "Pageable",
+    "org.springframework.transaction.annotation.Transactional",
+    "Page",
+    "Long",
+    "org.springframework.data.domain.Pageable",
+    "java.util.stream.Collectors"
+  ],
+  "analysis_timestamp": "2025-06-03 10:17:33"
+}
