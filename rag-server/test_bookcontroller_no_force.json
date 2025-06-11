@@ -1,0 +1,38 @@
+{
+  "analysis_data": {
+    "filePath": "/sample-pjt/src/main/java/com/skax/library/controller/BookController.java",
+    "language": "java",
+    "framework": "spring-boot",
+    "module": "controller",
+    "code": "package com.skax.library.controller;\n\nimport com.skax.library.dto.BookDto;\nimport com.skax.library.service.BookService;\nimport org.springframework.http.ResponseEntity;\nimport org.springframework.web.bind.annotation.*;\n\n@RestController\n@RequestMapping(\"/api/books\")\npublic class BookController {\n    private final BookService bookService;\n\n    @PostMapping\n    public ResponseEntity<BookDto> createBook(@RequestBody BookDto bookDto) {\n        return ResponseEntity.ok(bookService.createBook(bookDto));\n    }\n\n    @GetMapping(\"/{id}\")\n    public ResponseEntity<BookDto> getBookById(@PathVariable Long id) {\n        return ResponseEntity.ok(bookService.getBookById(id));\n    }\n}",
+    "classes": [
+      {
+        "name": "BookController",
+        "methods": [
+          {
+            "name": "createBook",
+            "returnType": "ResponseEntity",
+            "params": ["BookDto bookDto"]
+          },
+          {
+            "name": "getBookById", 
+            "returnType": "ResponseEntity",
+            "params": ["Long id"]
+          }
+        ]
+      }
+    ],
+    "references": [
+      "BookDto",
+      "BookService", 
+      "ResponseEntity",
+      "RestController",
+      "RequestMapping",
+      "PostMapping",
+      "GetMapping",
+      "RequestBody",
+      "PathVariable"
+    ]
+  },
+  "force_update": false
+} 

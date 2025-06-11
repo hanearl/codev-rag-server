@@ -28,6 +28,7 @@ services:
       - "8001:8001"
     volumes:
       - ./embedding-server:/app
+      - ./models:/app/models:ro
       - embedding-cache:/app/cache
     environment:
       - MODEL_NAME=sentence-transformers/all-MiniLM-L6-v2
