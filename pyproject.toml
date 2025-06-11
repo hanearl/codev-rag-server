@@ -27,6 +27,6 @@ test = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-addopts = "--cov=app --cov-report=html --cov-report=term-missing --cov-fail-under=90"
+testpaths = ["rag-server/tests"]
+addopts = "--cov=rag-server/app --cov-report=html --cov-report=term-missing --cov-fail-under=90"
 asyncio_mode = "auto" 

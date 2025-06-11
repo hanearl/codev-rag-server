@@ -73,61 +73,6 @@ codev-rag-server/
 └── requirements.txt          ← Python 의존성
 ```
 
-## 🛠 서비스별 특화 구조
-
-### 📊 Embedding Server
-```
-embedding-server/app/features/
-├── embeddings/               ← 임베딩 생성 기능
-│   ├── router.py            ← /embeddings 엔드포인트
-│   ├── service.py           ← 모델 로딩, 임베딩 생성 로직
-│   ├── schema.py            ← EmbeddingRequest, EmbeddingResponse
-│   └── __init__.py
-├── health/                  ← 헬스체크 기능
-│   ├── router.py           ← /health 엔드포인트
-│   ├── service.py          ← 서비스 상태 확인
-│   └── schema.py           ← HealthResponse
-└── models/                  ← 모델 관리 기능
-    ├── service.py          ← 모델 캐싱, 로딩 관리
-    └── schema.py           ← ModelInfo
-```
-
-### 🧠 LLM Server
-```
-llm-server/app/features/
-├── chat/                    ← 채팅/생성 기능
-│   ├── router.py           ← /chat 엔드포인트
-│   ├── service.py          ← LLM 호출, 응답 생성
-│   ├── schema.py           ← ChatRequest, ChatResponse
-│   └── __init__.py
-├── health/                 ← 헬스체크 기능
-└── prompts/                ← 프롬프트 관리 기능
-    ├── service.py         ← 프롬프트 템플릿 관리
-    └── schema.py          ← PromptTemplate
-```
-
-### 🔄 RAG Server
-```
-rag-server/app/features/
-├── search/                  ← 문서 검색 기능
-│   ├── router.py           ← /search 엔드포인트
-│   ├── service.py          ← 벡터 검색 로직
-│   ├── schema.py           ← SearchRequest, SearchResponse
-│   └── __init__.py
-├── documents/              ← 문서 관리 기능
-│   ├── router.py          ← /documents 엔드포인트
-│   ├── service.py         ← 문서 처리, 청킹
-│   ├── schema.py          ← DocumentRequest, DocumentResponse
-│   ├── model.py           ← Document ORM 모델
-│   ├── repository.py      ← 문서 DB 접근
-│   └── __init__.py
-├── chat/                  ← RAG 기반 채팅
-│   ├── router.py         ← /chat 엔드포인트
-│   ├── service.py        ← RAG 파이프라인 오케스트레이션
-│   └── schema.py         ← ChatRequest, ChatResponse
-└── health/               ← 헬스체크 기능
-```
-
 ## 🛠 파일별 구조 규칙
 
 ### Router 파일 (`{service}/app/features/**/router.py`)
@@ -204,7 +149,6 @@ async def root():
 - 공유 데이터베이스 금지 (서비스별 독립적 데이터 저장소)
 
 ### 2. 공통 네이밍 컨벤션
-- 서비스명: `{기능}-server` 형식 (예: `embedding-server`)
 - Features 디렉토리명: 소문자, 언더스코어 사용
 - 파일명: 표준 파일명 사용 (`router.py`, `service.py` 등)
 - 클래스명: PascalCase (예: `EmbeddingService`)
