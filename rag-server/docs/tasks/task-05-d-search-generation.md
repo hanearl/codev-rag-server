@@ -3,16 +3,31 @@
 ## 🎯 목표
 벡터 검색과 키워드 검색을 결합한 하이브리드 검색 서비스를 TDD 방식으로 구현합니다.
 
-## 📋 MVP 범위
+## 📋 현재 프로젝트 구조 분석
+
+### 🔍 기존 구현 현황
+1. **임베딩 서버**: `sentence-transformers/all-MiniLM-L6-v2` 모델 사용
+   - 단일/벌크 텍스트 임베딩 API 제공 (포트: 8001)
+   - 스키마: `EmbeddingRequest`, `EmbeddingResponse`, `BulkEmbeddingRequest`, `BulkEmbeddingResponse`
+
+2. **벡터 DB**: Qdrant 사용 (포트: 6333)
+   - 컬렉션: `code_embeddings` (벡터 차원: 384, 거리: Cosine)
+   - 기본 벡터 검색 기능 구현
+
+3. **RAG 서버**: 오케스트레이션 서비스 (포트: 8000)
+   - 기존 클라이언트: `EmbeddingClient`, `VectorClient`, `LLMClient`
+   - 인덱싱 서비스 구현 완료 (코드 파싱 및 벡터 저장)
+
+### 🚧 구현 필요 사항
 - 하이브리드 검색 서비스 (벡터 + 키워드)
 - 검색 결과 스코어링 및 랭킹
 - 검색 REST API
-- 검색 성능 최적화
 
 ## 🏗️ 기술 스택
 - **웹 프레임워크**: FastAPI
-- **벡터 검색**: Qdrant/Chroma
-- **키워드 검색**: BM25/Elasticsearch
+- **벡터 검색**: Qdrant (기존 구현 활용)
+- **키워드 검색**: BM25 기반 구현
+- **임베딩**: 기존 embedding-server 활용
 - **테스트**: pytest, httpx
 
 ## 📁 프로젝트 구조
@@ -21,14 +36,15 @@
 rag-server/
 ├── app/
 │   ├── features/
-│   │   └── search/
+│   │   └── search/          ← 새로 구현할 검색 기능
 │   │       ├── __init__.py
 │   │       ├── router.py        ← 검색 API
 │   │       ├── service.py       ← 검색 비즈니스 로직
 │   │       ├── schema.py        ← 검색 스키마
 │   │       ├── retriever.py     ← 하이브리드 검색기
 │   │       └── scorer.py        ← 검색 결과 스코어링
-│   └── main.py
+│   └── core/                ← 기존 클라이언트 활용
+│       └── clients.py       ← EmbeddingClient, VectorClient 활용
 ├── tests/
 │   ├── unit/
 │   │   └── features/
@@ -39,8 +55,7 @@ rag-server/
 │   │           └── test_router.py
 │   └── integration/
 │       └── test_search_api.py
-├── requirements.txt
-└── pytest.ini
+└── requirements.txt
 ```
 
 ## 🧪 TDD 구현 순서
@@ -90,6 +105,7 @@ class SearchRequest(BaseModel):
     limit: int = Field(default=10, min=1, max=50, description="결과 개수")
     vector_weight: float = Field(default=0.7, min=0.0, max=1.0, description="벡터 가중치")
     keyword_weight: float = Field(default=0.3, min=0.0, max=1.0, description="키워드 가중치")
+    collection_name: str = Field(default="code_embeddings", description="검색할 컬렉션")
     
     @validator('vector_weight', 'keyword_weight')
     def validate_weights(cls, v):
@@ -100,7 +116,7 @@ class SearchRequest(BaseModel):
 class SearchResult(BaseModel):
     id: str
     file_path: str
-    function_name: str
+    function_name: Optional[str] = None
     code_content: str
     code_type: str
     language: str
@@ -130,148 +146,103 @@ from unittest.mock import Mock, AsyncMock
 from app.features.search.retriever import HybridRetriever
 
 @pytest.fixture
-def mock_vector_client():
+def mock_embedding_client():
     client = Mock()
-    client.search = AsyncMock()
+    client.embed_single = AsyncMock()
     return client
 
 @pytest.fixture
-def mock_keyword_client():
+def mock_vector_client():
     client = Mock()
-    client.search = Mock()
+    client.hybrid_search = Mock()
     return client
 
 @pytest.mark.asyncio
 async def test_hybrid_retriever_should_combine_results(
-    mock_vector_client, mock_keyword_client
+    mock_embedding_client, mock_vector_client
 ):
     """하이브리드 검색기가 벡터와 키워드 결과를 결합해야 함"""
     # Given
-    retriever = HybridRetriever(mock_vector_client, mock_keyword_client)
+    retriever = HybridRetriever(mock_embedding_client, mock_vector_client)
     
-    mock_vector_client.search.return_value = [
-        {"id": "1", "score": 0.9, "payload": {"content": "vector result 1"}},
-        {"id": "2", "score": 0.8, "payload": {"content": "vector result 2"}}
-    ]
+    mock_embedding_client.embed_single.return_value = {
+        "embedding": [0.1, 0.2, 0.3]
+    }
     
-    mock_keyword_client.search.return_value = [
-        {"id": "2", "score": 0.7, "content": "keyword result 2"},
-        {"id": "3", "score": 0.6, "content": "keyword result 3"}
+    mock_vector_client.hybrid_search.return_value = [
+        {
+            "id": "1", 
+            "vector_score": 0.9, 
+            "keyword_score": 0.7,
+            "file_path": "test.py",
+            "code_content": "def test(): pass",
+            "code_type": "function",
+            "language": "python",
+            "line_start": 1,
+            "line_end": 1,
+            "keywords": ["test"]
+        }
     ]
     
     # When
     results = await retriever.search(
-        query_embedding=[0.1, 0.2, 0.3],
-        query_text="test query",
-        limit=10
+        query="test function",
+        keywords=["test"],
+        limit=10,
+        collection_name="code_embeddings"
     )
     
     # Then
-    assert len(results) == 3  # 중복 제거된 결과
-    assert results[0]["id"] == "1"  # 벡터 스코어가 높은 순
+    assert len(results) == 1
+    assert results[0]["id"] == "1"
     assert "vector_score" in results[0]
     assert "keyword_score" in results[0]
-
-@pytest.mark.asyncio
-async def test_hybrid_retriever_should_handle_empty_results(
-    mock_vector_client, mock_keyword_client
-):
-    """하이브리드 검색기가 빈 결과를 처리해야 함"""
-    # Given
-    retriever = HybridRetriever(mock_vector_client, mock_keyword_client)
-    
-    mock_vector_client.search.return_value = []
-    mock_keyword_client.search.return_value = []
-    
-    # When
-    results = await retriever.search([0.1, 0.2], "empty query", 10)
-    
-    # Then
-    assert len(results) == 0
+    mock_embedding_client.embed_single.assert_called_once()
+    mock_vector_client.hybrid_search.assert_called_once()
 ```
 
 **🟢 최소 구현**
 ```python
 # app/features/search/retriever.py
 from typing import List, Dict, Any, Optional
-from app.core.clients import VectorClient, KeywordClient
+from app.core.clients import EmbeddingClient, VectorClient
 import logging
 
 logger = logging.getLogger(__name__)
 
 class HybridRetriever:
-    def __init__(self, vector_client: VectorClient, keyword_client: KeywordClient):
+    def __init__(self, embedding_client: EmbeddingClient, vector_client: VectorClient):
+        self.embedding_client = embedding_client
         self.vector_client = vector_client
-        self.keyword_client = keyword_client
-        self.collection_name = "code_chunks"
     
     async def search(
         self, 
-        query_embedding: List[float],
-        query_text: str,
+        query: str,
+        keywords: Optional[List[str]] = None,
         limit: int = 10,
-        keywords: Optional[List[str]] = None
+        collection_name: str = "code_embeddings"
     ) -> List[Dict[str, Any]]:
         """하이브리드 검색 수행"""
         try:
-            # 벡터 검색
-            vector_results = await self.vector_client.search(
-                collection_name=self.collection_name,
-                query_vector=query_embedding,
-                limit=limit * 2  # 더 많은 결과를 가져와서 다양성 확보
-            )
+            # 쿼리 임베딩 생성
+            embedding_response = await self.embedding_client.embed_single({
+                "text": query
+            })
+            query_embedding = embedding_response["embedding"]
             
-            # 키워드 검색
-            keyword_results = self.keyword_client.search(
-                query=query_text,
+            # 벡터 DB에서 하이브리드 검색 수행 (기존 구현 활용)
+            results = self.vector_client.hybrid_search(
+                collection_name=collection_name,
+                query_embedding=query_embedding,
                 keywords=keywords,
-                limit=limit * 2
+                limit=limit
             )
             
-            # 결과 통합 및 중복 제거
-            combined_results = self._combine_results(vector_results, keyword_results)
-            
-            # 상위 결과 반환
-            return combined_results[:limit]
+            return results
             
         except Exception as e:
             logger.error(f"하이브리드 검색 실패: {e}")
             raise
-    
-    def _combine_results(
-        self, 
-        vector_results: List[Dict], 
-        keyword_results: List[Dict]
-    ) -> List[Dict[str, Any]]:
-        """벡터와 키워드 검색 결과 통합"""
-        result_map = {}
-        
-        # 벡터 결과 처리
-        for result in vector_results:
-            item_id = result["id"]
-            result_map[item_id] = {
-                "id": item_id,
-                "vector_score": result["score"],
-                "keyword_score": 0.0,
-                "payload": result.get("payload", {})
-            }
-        
-        # 키워드 결과 처리
-        for result in keyword_results:
-            item_id = result["id"]
-            if item_id in result_map:
-                result_map[item_id]["keyword_score"] = result["score"]
-            else:
-                result_map[item_id] = {
-                    "id": item_id,
-                    "vector_score": 0.0,
-                    "keyword_score": result["score"],
-                    "payload": result
-                }
-        
-        # 리스트로 변환하고 정렬
-        combined_results = list(result_map.values())
-        return combined_results
 ```
 
 ### 3단계: 스코어링 시스템 구현 (TDD)
@@ -310,7 +281,7 @@ def test_search_scorer_should_sort_by_combined_score():
     
     results = [
         {"id": "1", "vector_score": 0.5, "keyword_score": 0.9},  # 0.65
-        {"id": "2", "vector_score": 0.9, "keyword_score": 0.5},  # 0.78
+        {"id": "2", "vector_score": 0.9, "keyword_score": 0.5},  # 0.78  
         {"id": "3", "vector_score": 0.8, "keyword_score": 0.8}   # 0.8
     ]
     
@@ -382,12 +353,6 @@ from app.features.search.service import SearchService
 from app.features.search.schema import SearchRequest
 
 @pytest.fixture
-def mock_embedding_client():
-    client = Mock()
-    client.embed_single = AsyncMock()
-    return client
-
-@pytest.fixture
 def mock_retriever():
     retriever = Mock()
     retriever.search = AsyncMock()
@@ -401,31 +366,25 @@ def mock_scorer():
 
 @pytest.mark.asyncio
 async def test_search_service_should_perform_hybrid_search(
-    mock_embedding_client, mock_retriever, mock_scorer
+    mock_retriever, mock_scorer
 ):
     """검색 서비스가 하이브리드 검색을 수행해야 함"""
     # Given
-    service = SearchService(mock_embedding_client, mock_retriever, mock_scorer)
-    
-    mock_embedding_client.embed_single.return_value = {
-        "embedding": [0.1, 0.2, 0.3]
-    }
+    service = SearchService(mock_retriever, mock_scorer)
     
     mock_retriever.search.return_value = [
         {
             "id": "test-id-1",
             "vector_score": 0.9,
             "keyword_score": 0.8,
-            "payload": {
-                "file_path": "test.py",
-                "function_name": "test_func",
-                "code_content": "def test_func(): pass",
-                "code_type": "function",
-                "language": "python",
-                "line_start": 1,
-                "line_end": 1,
-                "keywords": ["test", "func"]
-            }
+            "file_path": "test.py",
+            "function_name": "test_func",
+            "code_content": "def test_func(): pass",
+            "code_type": "function",
+            "language": "python",
+            "line_start": 1,
+            "line_end": 1,
+            "keywords": ["test", "func"]
         }
     ]
     
@@ -435,16 +394,14 @@ async def test_search_service_should_perform_hybrid_search(
             "vector_score": 0.9,
             "keyword_score": 0.8,
             "combined_score": 0.86,
-            "payload": {
-                "file_path": "test.py",
-                "function_name": "test_func",
-                "code_content": "def test_func(): pass",
-                "code_type": "function",
-                "language": "python",
-                "line_start": 1,
-                "line_end": 1,
-                "keywords": ["test", "func"]
-            }
+            "file_path": "test.py",
+            "function_name": "test_func",
+            "code_content": "def test_func(): pass",
+            "code_type": "function", 
+            "language": "python",
+            "line_start": 1,
+            "line_end": 1,
+            "keywords": ["test", "func"]
         }
     ]
     
@@ -457,7 +414,6 @@ async def test_search_service_should_perform_hybrid_search(
     assert result.total_results == 1
     assert result.results[0].function_name == "test_func"
     assert result.results[0].combined_score == 0.86
-    mock_embedding_client.embed_single.assert_called_once()
     mock_retriever.search.assert_called_once()
     mock_scorer.calculate_combined_scores.assert_called_once()
 ```
@@ -470,19 +426,12 @@ from typing import List
 from .schema import SearchRequest, SearchResponse, SearchResult
 from .retriever import HybridRetriever
 from .scorer import SearchScorer
-from app.core.clients import EmbeddingClient
 import logging
 
 logger = logging.getLogger(__name__)
 
 class SearchService:
-    def __init__(
-        self, 
-        embedding_client: EmbeddingClient, 
-        retriever: HybridRetriever,
-        scorer: SearchScorer
-    ):
-        self.embedding_client = embedding_client
+    def __init__(self, retriever: HybridRetriever, scorer: SearchScorer):
         self.retriever = retriever
         self.scorer = scorer
     
@@ -491,18 +440,12 @@ class SearchService:
         start_time = time.time()
         
         try:
-            # 쿼리 임베딩 생성
-            embedding_response = await self.embedding_client.embed_single({
-                "text": request.query
-            })
-            query_embedding = embedding_response["embedding"]
-            
             # 하이브리드 검색 수행
             raw_results = await self.retriever.search(
-                query_embedding=query_embedding,
-                query_text=request.query,
+                query=request.query,
                 keywords=request.keywords,
-                limit=request.limit
+                limit=request.limit,
+                collection_name=request.collection_name
             )
             
             # 점수 계산 및 정렬
@@ -518,18 +461,16 @@ class SearchService:
             keyword_count = 0
             
             for result in scored_results:
-                payload = result.get("payload", {})
-                
                 search_result = SearchResult(
                     id=result["id"],
-                    file_path=payload.get("file_path", ""),
-                    function_name=payload.get("function_name", ""),
-                    code_content=payload.get("code_content", ""),
-                    code_type=payload.get("code_type", ""),
-                    language=payload.get("language", ""),
-                    line_start=payload.get("line_start", 0),
-                    line_end=payload.get("line_end", 0),
-                    keywords=payload.get("keywords", []),
+                    file_path=result.get("file_path", ""),
+                    function_name=result.get("function_name"),
+                    code_content=result.get("code_content", ""),
+                    code_type=result.get("code_type", ""),
+                    language=result.get("language", ""),
+                    line_start=result.get("line_start", 0),
+                    line_end=result.get("line_end", 0),
+                    keywords=result.get("keywords", []),
                     vector_score=result["vector_score"],
                     keyword_score=result["keyword_score"],
                     combined_score=result["combined_score"]
@@ -590,6 +531,7 @@ def test_search_endpoint_should_return_results():
     )
     
     # Mock dependency
+    from app.features.search.service import SearchService
     mock_service = Mock()
     mock_service.search_code = AsyncMock(return_value=mock_response)
     
@@ -611,19 +553,6 @@ def test_search_endpoint_should_return_results():
     
     # Cleanup
     del app.dependency_overrides[SearchService]
-
-def test_search_endpoint_should_validate_request():
-    """검색 엔드포인트가 요청을 검증해야 함"""
-    # Given
-    client = TestClient(app)
-    
-    # When: 잘못된 요청
-    response = client.post("/api/v1/search", json={
-        "limit": 10  # query 누락
-    })
-    
-    # Then
-    assert response.status_code == 422  # Validation Error
 ```
 
 **🟢 최소 구현**
@@ -665,8 +594,7 @@ async def health_check():
     """검색 서비스 헬스체크"""
     return {
         "status": "healthy",
-        "service": "search-service",
-        "timestamp": "2024-01-15T10:00:00Z"
+        "service": "search-service"
     }
 ```
 
@@ -700,7 +628,7 @@ def test_search_api_integration():
     assert "search_time_ms" in data
     assert data["search_time_ms"] < 5000  # 5초 이내
 
-@pytest.mark.integration
+@pytest.mark.integration  
 def test_search_performance():
     """검색 성능 테스트"""
     client = TestClient(app)
@@ -708,7 +636,7 @@ def test_search_performance():
     # When: 다양한 쿼리로 검색
     queries = [
         "recursive function",
-        "data processing",
+        "data processing", 
         "error handling",
         "database connection",
         "API endpoint"
@@ -728,14 +656,14 @@ def test_search_performance():
 
 ## 📊 성공 기준
 1. **검색 성능**: 쿼리 당 5초 이내 응답
-2. **검색 정확도**: 관련 코드 검색 정확도 80% 이상
+2. **검색 정확도**: 관련 코드 검색 정확도 80% 이상  
 3. **하이브리드 효과**: 벡터+키워드 결합이 단일 방식보다 10% 이상 성능 향상
 4. **API 안정성**: 99% 이상 성공률
 5. **테스트 커버리지**: 90% 이상
 
 ## 📈 다음 단계
 - Task 05-E: 코드 생성 서비스 구현
-- Task 05-F: 프롬프트 관리 서비스 구현
+- Task 05-F: 프롬프트 관리 서비스 구현  
 - 검색 서비스와 생성 서비스 통합
 
 ## 🔄 TDD 사이클 요약

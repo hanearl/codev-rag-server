@@ -172,42 +172,60 @@ class VectorClient:
     def hybrid_search(self, collection_name: str, query_embedding: List[float], 
                      keywords: Optional[List[str]] = None, 
                      limit: int = 10) -> List[Dict[str, Any]]:
-        """하이브리드 검색 (벡터 + 키워드)"""
+        """하이브리드 검색 (벡터 + BM25 키워드)"""
         try:
-            # 벡터 검색
+            # 벡터 검색 (더 많은 결과 가져와서 키워드 필터링)
+            search_limit = max(limit * 3, 50)  # BM25 필터링을 위해 더 많은 결과
             search_result = self.client.search(
                 collection_name=collection_name,
                 query_vector=query_embedding,
-                limit=limit,
+                limit=search_limit,
                 with_payload=True,
                 with_vectors=False
             )
             
             # 결과 변환
             results = []
+            documents = []  # BM25용 문서 컬렉션
+            
             for scored_point in search_result:
                 result = {
                     "id": str(scored_point.id),
                     "vector_score": scored_point.score,
                     **scored_point.payload
                 }
-                
-                # 키워드 점수 계산 (단순 매칭)
-                if keywords:
-                    keyword_score = self._calculate_keyword_score(
-                        scored_point.payload.get('keywords', []), keywords
-                    )
-                    result["keyword_score"] = keyword_score
-                    result["combined_score"] = (scored_point.score * 0.7 + keyword_score * 0.3)
-                else:
-                    result["keyword_score"] = 0.0
-                    result["combined_score"] = scored_point.score
-                
                 results.append(result)
+                
+                # BM25를 위한 문서 토큰 준비
+                doc_tokens = []
+                if 'keywords' in scored_point.payload:
+                    doc_tokens.extend(scored_point.payload['keywords'])
+                if 'code_content' in scored_point.payload:
+                    # 코드 내용도 간단히 토큰화
+                    code_tokens = self._tokenize_code_content(scored_point.payload['code_content'])
+                    doc_tokens.extend(code_tokens)
+                
+                documents.append(doc_tokens)
             
-            # 결합 점수로 재정렬
+            # BM25 키워드 점수 계산
+            if keywords and results:
+                keyword_scores = self._calculate_bm25_scores(keywords, documents)
+                
+                for i, result in enumerate(results):
+                    if i < len(keyword_scores):
+                        result["keyword_score"] = keyword_scores[i]
+                        result["combined_score"] = (result["vector_score"] * 0.7 + keyword_scores[i] * 0.3)
+                    else:
+                        result["keyword_score"] = 0.0
+                        result["combined_score"] = result["vector_score"]
+            else:
+                for result in results:
+                    result["keyword_score"] = 0.0
+                    result["combined_score"] = result["vector_score"]
+            
+            # 결합 점수로 재정렬 후 limit 적용
             results.sort(key=lambda x: x["combined_score"], reverse=True)
-            return results
+            return results[:limit]
             
         except Exception as e:
             logger.error(f"하이브리드 검색 실패: {e}")
@@ -283,9 +301,36 @@ class VectorClient:
             logger.error(f"청크 조회 실패: {e}")
             raise VectorDBError(f"청크 조회 실패: {e}")
 
-    def _calculate_keyword_score(self, doc_keywords: List[str], 
-                                query_keywords: List[str]) -> float:
-        """키워드 매칭 점수 계산"""
+    def _calculate_bm25_scores(self, query_keywords: List[str], 
+                             documents: List[List[str]]) -> List[float]:
+        """BM25를 사용한 키워드 점수 계산"""
+        try:
+            from app.features.search.bm25_scorer import BM25KeywordScorer
+            
+            if not documents or not query_keywords:
+                return [0.0] * len(documents)
+            
+            # BM25 스코어러 초기화 및 학습
+            bm25 = BM25KeywordScorer()
+            bm25.fit(documents)
+            
+            # 모든 문서에 대한 점수 계산
+            scores = bm25.get_scores(query_keywords)
+            
+            # 0-1 범위로 정규화
+            normalized_scores = bm25.normalize_scores(scores)
+            
+            return normalized_scores
+            
+        except Exception as e:
+            logger.warning(f"BM25 점수 계산 실패, 기본 방식 사용: {e}")
+            # BM25 실패 시 기본 Jaccard 방식 fallback
+            return [self._calculate_keyword_score_fallback(doc, query_keywords) 
+                   for doc in documents]
+    
+    def _calculate_keyword_score_fallback(self, doc_keywords: List[str], 
+                                        query_keywords: List[str]) -> float:
+        """키워드 매칭 점수 계산 (Jaccard 유사도 fallback)"""
         if not doc_keywords or not query_keywords:
             return 0.0
         
@@ -296,6 +341,24 @@ class VectorClient:
         union = len(doc_set.union(query_set))
         
         return intersection / union if union > 0 else 0.0
+    
+    def _tokenize_code_content(self, code_content: str) -> List[str]:
+        """코드 내용을 간단히 토큰화"""
+        import re
+        
+        # 기본적인 코드 토큰화 (camelCase, snake_case 분해 포함)
+        # CamelCase 분해
+        camel_split = re.sub(r'([a-z])([A-Z])', r'\1 \2', code_content)
+        # snake_case 분해  
+        snake_split = camel_split.replace('_', ' ')
+        # 특수문자 제거 및 단어 추출
+        words = re.findall(r'\b[a-zA-Z]{2,}\b', snake_split.lower())
+        
+        # 프로그래밍 불용어 제거
+        stop_words = {'def', 'class', 'if', 'else', 'for', 'while', 'try', 'catch',
+                     'public', 'private', 'static', 'void', 'int', 'string', 'bool'}
+        
+        return [word for word in words if word not in stop_words]
 
 
 class ExternalServiceClients:

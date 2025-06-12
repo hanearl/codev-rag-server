@@ -1,0 +1,10 @@
+{"difficulty": "하", "question": "도서 관리를 담당하는 컨트롤러 클래스는 무엇인가요?", "answer": "com.skax.library.controller.BookController"}
+{"difficulty": "하", "question": "회원 정보를 관리하는 서비스 구현체는 무엇인가요?", "answer": "com.skax.library.service.impl.MemberServiceImpl"}
+{"difficulty": "중", "question": "도서 대출 처리 시 호출되는 클래스들은 무엇인가요?", "answer": ["com.skax.library.controller.LoanController", "com.skax.library.service.impl.LoanServiceImpl.checkoutBook", "com.skax.library.repository.LoanRepository"]}
+{"difficulty": "하", "question": "대출 정보를 저장하는 엔티티 클래스는 무엇인가요?", "answer": "com.skax.library.model.Loan"}
+{"difficulty": "중", "question": "회원 가입 처리 전체 흐름에서 호출되는 클래스들은 무엇인가요?", "answer": ["com.skax.library.controller.MemberController", "com.skax.library.service.impl.MemberServiceImpl.createMember", "com.skax.library.repository.MemberRepository"]}
+{"difficulty": "하", "question": "벌금 관리를 담당하는 서비스 인터페이스는 무엇인가요?", "answer": "com.skax.library.service.FineService"}
+{"difficulty": "상", "question": "대출 반납 및 벌금 부과까지 연계된 전체 시스템 흐름을 처리하는 클래스들은 무엇인가요?", "answer": ["com.skax.library.service.impl.LoanServiceImpl.returnBook", "com.skax.library.service.impl.FineServiceImpl.createFine", "com.skax.library.repository.FineRepository"]}
+{"difficulty": "하", "question": "카테고리 정보를 저장하는 엔티티 클래스는 무엇인가요?", "answer": "com.skax.library.model.Category"}
+{"difficulty": "중", "question": "도서 정보 업데이트 처리 플로우에서 호출되는 클래스들은 무엇인가요?", "answer": ["com.skax.library.controller.BookController", "com.skax.library.service.impl.BookServiceImpl.updateBook", "com.skax.library.repository.BookRepository"]}
+{"difficulty": "하", "question": "예약 기능을 관리하는 컨트롤러 클래스는 무엇인가요?", "answer": "com.skax.library.controller.ReservationController"} 

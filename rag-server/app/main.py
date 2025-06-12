@@ -4,6 +4,8 @@ from app.core.config import settings
 from app.features.users.router import router as users_router
 from app.features.indexing.router import router as indexing_router
 from app.features.prompts.router import router as prompts_router
+from app.features.search.router import router as search_router
+from app.features.generation.router import router as generation_router
 
 # 파서들을 임포트하여 자동 등록
 from app.features.indexing.parsers import PythonParser, JavaParser, JavaScriptParser
@@ -18,6 +20,8 @@ app = FastAPI(
 app.include_router(users_router, prefix="/api/v1", tags=["users"])
 app.include_router(indexing_router)
 app.include_router(prompts_router)
+app.include_router(search_router)
+app.include_router(generation_router)
 
 @app.get("/")
 async def root():

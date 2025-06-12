@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from typing import Optional
+from pydantic import Field
 
 
 class Settings(BaseSettings):
@@ -25,6 +26,10 @@ class Settings(BaseSettings):
     qdrant_port: int = 6333
     request_timeout: int = 30
     max_retries: int = 3
+    
+    # OpenAI API 설정 (LLM 서버가 OpenAI 호환 API 제공)
+    openai_api_key: str = Field(default="sk-dummy-key", env="OPENAI_API_KEY")
+    openai_api_base_url: str = Field(default="http://localhost:8002/v1", env="OPENAI_API_BASE_URL")
     
     class Config:
         env_file = ".env"
