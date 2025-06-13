@@ -38,6 +38,9 @@ passlib[bcrypt]==1.7.4
 # JSON Lines support
 jsonlines==4.0.0
 
+# System monitoring
+psutil==5.9.6
+
 # Development
 black==23.11.0
 isort==5.12.0

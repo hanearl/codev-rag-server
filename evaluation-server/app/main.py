@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 
 from app.features.evaluation.router import router as evaluation_router
+from app.features.baselines.router import router as baseline_router
+from app.features.evaluations.router import router as evaluations_router
 
 # 로깅 설정
 logging.basicConfig(
@@ -29,6 +31,8 @@ app.add_middleware(
 
 # 라우터 등록
 app.include_router(evaluation_router)
+app.include_router(baseline_router)
+app.include_router(evaluations_router)
 
 @app.get("/")
 async def root():

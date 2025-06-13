@@ -188,7 +188,7 @@ class BaselineComparison(BaseModel):
     """베이스라인 비교 결과"""
     baseline_id: str = Field(..., description="베이스라인 결과 ID")
     current_result_id: str = Field(..., description="현재 결과 ID")
-    metric_improvements: Dict[str, float] = Field(default_factory=dict, description="메트릭 개선도")
+    metric_improvements: Dict[str, Dict[str, float]] = Field(default_factory=dict, description="메트릭별 k값별 개선도")
     is_better: bool = Field(False, description="베이스라인보다 성능이 좋은지")
 
 

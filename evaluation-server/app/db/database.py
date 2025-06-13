@@ -28,6 +28,11 @@ def get_db():
 
 def create_tables():
     """모든 테이블 생성"""
+    # 모든 모델을 import하여 테이블 생성을 보장
+    from app.features.evaluations.model import EvaluationResult, EvaluationTask
+    from app.features.systems.model import RAGSystem
+    from app.features.baselines.model import Baseline
+    
     Base.metadata.create_all(bind=engine)
 
 

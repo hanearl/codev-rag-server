@@ -9,6 +9,7 @@ from app.features.evaluation.schema import (
 )
 from app.features.evaluation.service import evaluation_service
 from app.features.systems.factory import rag_system_factory, RAGSystemTemplates
+from app.features.datasets.validator import DatasetValidator, ValidationReport
 from app.db.database import get_db
 
 router = APIRouter(prefix="/api/v1/evaluation", tags=["evaluation"])
@@ -91,6 +92,37 @@ async def get_dataset_info(dataset_name: str):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"데이터셋 정보 조회 실패: {str(e)}"
+        )
+
+
+@router.get("/datasets/{dataset_name}/validate", response_model=ValidationReport)
+async def validate_dataset(dataset_name: str):
+    """데이터셋 품질 검증"""
+    try:
+        from pathlib import Path
+        
+        # 데이터셋 경로 확인
+        datasets_path = Path("datasets")
+        dataset_path = datasets_path / dataset_name
+        
+        if not dataset_path.exists():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"데이터셋 '{dataset_name}'을 찾을 수 없습니다"
+            )
+        
+        # 검증 실행
+        validator = DatasetValidator()
+        report = validator.validate_dataset(str(dataset_path))
+        
+        return report
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"데이터셋 검증 실패: {str(e)}"
         )
 
 
