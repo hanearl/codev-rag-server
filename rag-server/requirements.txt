@@ -19,4 +19,24 @@ javalang==0.13.0
 esprima==4.0.1
 locust>=2.17.0
 httpx>=0.25.0
-docker>=6.1.0 
+docker>=6.1.0
+
+# LlamaIndex 관련
+llama-index-core==0.10.57
+llama-index-readers-file==0.1.23
+llama-index-embeddings-openai==0.1.10
+llama-index-vector-stores-qdrant==0.2.8
+llama-index-retrievers-bm25==0.1.4
+
+# LangChain 관련
+langchain==0.2.11
+langchain-openai==0.1.17
+langchain-core==0.2.25
+langchain-community==0.2.10
+
+# 코드 파싱 관련
+ast-tools==0.1.8
+tree-sitter==0.20.4
+tree-sitter-java==0.20.2
+tree-sitter-python==0.20.4
+tree-sitter-javascript==0.20.4 
