@@ -52,13 +52,13 @@ class SystemConfig(BaseModel):
     name: str
     base_url: str
     api_key: Optional[str] = None
-    system_type: str = "external"  # external, mock, local, openai_rag, langchain_rag, llamaindex_rag
+    system_type: str = "external"  # external, mock, local, openai_rag, langchain_rag, llamaindex_rag, rag_server
 
 
 class AdvancedSystemConfig(BaseModel):
     """고급 RAG 시스템 설정"""
     name: str
-    system_type: str  # openai_rag, langchain_rag, llamaindex_rag, custom_http, mock
+    system_type: str  # openai_rag, langchain_rag, llamaindex_rag, custom_http, rag_server, mock
     base_url: str
     api_key: Optional[str] = None
     timeout: float = 30.0

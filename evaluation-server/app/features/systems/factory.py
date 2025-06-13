@@ -3,6 +3,7 @@ import logging
 from app.features.systems.interface import RAGSystemInterface, RAGSystemConfig, RAGSystemType
 from app.features.systems.http_client import GenericHTTPRAGSystem
 from app.features.systems.openai_adapter import OpenAIRAGAdapter, LangChainRAGAdapter, LlamaIndexRAGAdapter
+from app.features.systems.rag_server_adapter import RAGServerAdapter
 from app.features.systems.mock_client import MockRAGSystem
 
 logger = logging.getLogger(__name__)
@@ -17,6 +18,7 @@ class RAGSystemFactory:
             RAGSystemType.LANGCHAIN_RAG: LangChainRAGAdapter,
             RAGSystemType.LLAMAINDEX_RAG: LlamaIndexRAGAdapter,
             RAGSystemType.CUSTOM_HTTP: GenericHTTPRAGSystem,
+            RAGSystemType.RAG_SERVER: RAGServerAdapter,
             RAGSystemType.MOCK: MockRAGSystem
         }
     
@@ -149,6 +151,17 @@ class RAGSystemTemplates:
                 score_field=score_field,
                 filepath_field=filepath_field
             )
+        )
+    
+    @staticmethod
+    def rag_server(base_url: str = "http://rag-server:8000", api_key: Optional[str] = None) -> RAGSystemConfig:
+        """codev-rag-server 설정"""
+        return RAGSystemConfig(
+            name="codev-rag-server",
+            system_type=RAGSystemType.RAG_SERVER,
+            base_url=base_url,
+            api_key=api_key,
+            timeout=30.0
         )
     
     @staticmethod

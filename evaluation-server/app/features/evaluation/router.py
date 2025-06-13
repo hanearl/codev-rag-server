@@ -188,6 +188,7 @@ async def get_supported_rag_system_types():
                 "langchain_rag": "LangChain 기반 RAG 시스템",
                 "llamaindex_rag": "LlamaIndex 기반 RAG 시스템", 
                 "custom_http": "커스텀 HTTP API RAG 시스템",
+                "rag_server": "codev-rag-server (하이브리드 검색 + 코드 생성)",
                 "mock": "테스트용 Mock RAG 시스템"
             }
         }
@@ -249,6 +250,30 @@ async def get_rag_system_template(system_type: str):
                 "filepath_field": "filepath",
                 "required_fields": ["base_url"],
                 "optional_fields": ["api_key", "search_endpoint", "embed_endpoint", "query_field", "k_field"]
+            },
+            "rag_server": {
+                "name": "codev-rag-server",
+                "system_type": "rag_server",
+                "base_url": "http://rag-server:8000",
+                "api_key": "optional-api-key",
+                "timeout": 30.0,
+                "features": {
+                    "hybrid_search": True,
+                    "rrf_fusion": True,
+                    "code_generation": True,
+                    "multi_language": True,
+                    "vector_search": True,
+                    "keyword_search": True
+                },
+                "search_params": {
+                    "vector_weight": 0.7,
+                    "keyword_weight": 0.3,
+                    "use_rrf": True,
+                    "rrf_k": 60,
+                    "collection_name": "code_chunks"
+                },
+                "required_fields": ["base_url"],
+                "optional_fields": ["api_key", "timeout"]
             },
             "mock": {
                 "name": "mock-rag",

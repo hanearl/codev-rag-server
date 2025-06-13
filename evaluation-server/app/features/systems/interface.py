@@ -18,6 +18,7 @@ class RAGSystemType(str, Enum):
     LANGCHAIN_RAG = "langchain_rag"
     LLAMAINDEX_RAG = "llamaindex_rag"
     CUSTOM_HTTP = "custom_http"
+    RAG_SERVER = "rag_server"
     MOCK = "mock"
 
 

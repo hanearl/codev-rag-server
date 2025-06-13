@@ -198,6 +198,12 @@ class EvaluationService:
                 api_key=getattr(system_config, 'api_key', None)
             )
             return create_rag_system(config)
+        elif system_config.system_type == "rag_server":
+            config = RAGSystemTemplates.rag_server(
+                base_url=system_config.base_url,
+                api_key=getattr(system_config, 'api_key', None)
+            )
+            return create_rag_system(config)
         else:
             # 기본값: 커스텀 HTTP
             config = RAGSystemTemplates.custom_http_rag(
