@@ -8,6 +8,8 @@ from .base_index import BaseIndex, IndexedDocument
 from .exceptions import IndexError, IndexBuildError, IndexQueryError, IndexUpdateError
 from .vector_index import CodeVectorIndex, VectorIndexConfig
 from .vector_service import VectorIndexService, get_vector_index_service
+from .bm25_index import CodeBM25Index, BM25IndexConfig, CodeTokenizer
+from .bm25_service import BM25IndexService, get_bm25_index_service
 
 __all__ = [
     "BaseIndex",
@@ -19,5 +21,10 @@ __all__ = [
     "CodeVectorIndex",
     "VectorIndexConfig",
     "VectorIndexService",
-    "get_vector_index_service"
+    "get_vector_index_service",
+    "CodeBM25Index",
+    "BM25IndexConfig", 
+    "CodeTokenizer",
+    "BM25IndexService",
+    "get_bm25_index_service"
 ] 
