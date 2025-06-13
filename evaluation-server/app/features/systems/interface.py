@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from pydantic import BaseModel
+from enum import Enum
 
 
 class RetrievalResult(BaseModel):
@@ -11,8 +12,68 @@ class RetrievalResult(BaseModel):
     metadata: Dict[str, Any] = {}
 
 
+class RAGSystemType(str, Enum):
+    """지원하는 RAG 시스템 타입"""
+    OPENAI_RAG = "openai_rag"
+    LANGCHAIN_RAG = "langchain_rag"
+    LLAMAINDEX_RAG = "llamaindex_rag"
+    CUSTOM_HTTP = "custom_http"
+    MOCK = "mock"
+
+
+class EndpointConfig(BaseModel):
+    """API 엔드포인트 설정"""
+    search: str = "/api/v1/search"
+    embed: str = "/api/v1/embed"
+    health: str = "/health"
+    info: str = "/api/v1/info"
+
+
+class RequestFormat(BaseModel):
+    """요청 형식 설정"""
+    query_field: str = "query"
+    k_field: str = "k"
+    text_field: str = "text"
+    additional_fields: Dict[str, Any] = {}
+
+
+class ResponseFormat(BaseModel):
+    """응답 형식 설정"""
+    results_field: str = "results"
+    content_field: str = "content"
+    score_field: str = "score"
+    filepath_field: str = "filepath"
+    metadata_field: str = "metadata"
+    embedding_field: str = "embedding"
+
+
+class RAGSystemConfig(BaseModel):
+    """RAG 시스템 설정"""
+    name: str
+    system_type: RAGSystemType
+    base_url: str
+    api_key: Optional[str] = None
+    timeout: float = 30.0
+    max_retries: int = 3
+    
+    # API 설정
+    endpoints: EndpointConfig = EndpointConfig()
+    request_format: RequestFormat = RequestFormat()
+    response_format: ResponseFormat = ResponseFormat()
+    
+    # 인증 설정
+    auth_type: str = "bearer"  # bearer, api_key, basic, none
+    auth_header: str = "Authorization"
+    
+    # 추가 헤더
+    custom_headers: Dict[str, str] = {}
+
+
 class RAGSystemInterface(ABC):
     """RAG 시스템 인터페이스"""
+    
+    def __init__(self, config: RAGSystemConfig):
+        self.config = config
     
     @abstractmethod
     async def embed_query(self, query: str) -> List[float]:
@@ -60,5 +121,13 @@ class RAGSystemInterface(ABC):
         """
         return {
             "type": self.__class__.__name__,
+            "system_type": self.config.system_type,
+            "name": self.config.name,
+            "base_url": self.config.base_url,
             "status": "unknown"
-        } 
+        }
+    
+    @abstractmethod
+    async def close(self):
+        """리소스 정리"""
+        pass 

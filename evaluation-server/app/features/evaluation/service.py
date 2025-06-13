@@ -21,7 +21,8 @@ from app.features.evaluation.schema import (
 )
 from app.features.evaluation.dataset_loader import DatasetLoader, create_default_dataset_loader
 from app.core.classpath_utils import ClasspathMatcher, create_default_classpath_matcher, ClasspathConverter
-from app.features.systems.interface import RAGSystemInterface
+from app.features.systems.interface import RAGSystemInterface, RAGSystemConfig
+from app.features.systems.factory import create_rag_system, RAGSystemTemplates
 from app.features.systems.http_client import HTTPRAGSystem
 from app.features.systems.mock_client import MockRAGSystem
 from app.features.metrics.manager import MetricsManager, default_metrics_manager
@@ -168,13 +169,43 @@ class EvaluationService:
     
     def _create_rag_system(self, system_config: SystemConfig) -> RAGSystemInterface:
         """RAG 시스템 생성"""
+        # 새로운 RAGSystemConfig 형식인지 확인
+        if hasattr(system_config, 'system_type') and hasattr(system_config, 'endpoints'):
+            # 이미 RAGSystemConfig 형식
+            return create_rag_system(system_config)
+        
+        # 기존 SystemConfig를 RAGSystemConfig로 변환
+        from app.features.systems.interface import RAGSystemType
+        
         if system_config.system_type == "mock":
-            return MockRAGSystem()
-        else:
-            return HTTPRAGSystem(
+            config = RAGSystemTemplates.mock_rag()
+            return create_rag_system(config)
+        elif system_config.system_type == "openai_rag":
+            config = RAGSystemTemplates.openai_rag(
+                api_key=getattr(system_config, 'api_key', None),
+                base_url=system_config.base_url
+            )
+            return create_rag_system(config)
+        elif system_config.system_type == "langchain_rag":
+            config = RAGSystemTemplates.langchain_rag(
                 base_url=system_config.base_url,
                 api_key=getattr(system_config, 'api_key', None)
             )
+            return create_rag_system(config)
+        elif system_config.system_type == "llamaindex_rag":
+            config = RAGSystemTemplates.llamaindex_rag(
+                base_url=system_config.base_url,
+                api_key=getattr(system_config, 'api_key', None)
+            )
+            return create_rag_system(config)
+        else:
+            # 기본값: 커스텀 HTTP
+            config = RAGSystemTemplates.custom_http_rag(
+                name=system_config.name,
+                base_url=system_config.base_url,
+                api_key=getattr(system_config, 'api_key', None)
+            )
+            return create_rag_system(config)
     
     def _convert_predictions_to_classpaths(
         self, 

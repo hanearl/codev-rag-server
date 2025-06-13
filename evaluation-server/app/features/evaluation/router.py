@@ -8,6 +8,7 @@ from app.features.evaluation.schema import (
     DatasetInfoResponse, MetricsInfoResponse, ClasspathTestRequest, ClasspathTestResponse
 )
 from app.features.evaluation.service import evaluation_service
+from app.features.systems.factory import rag_system_factory, RAGSystemTemplates
 from app.db.database import get_db
 
 router = APIRouter(prefix="/api/v1/evaluation", tags=["evaluation"])
@@ -172,6 +173,106 @@ async def test_classpath_conversion(request: ClasspathTestRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"클래스패스 변환 테스트 실패: {str(e)}"
+        )
+
+
+@router.get("/rag-systems/types")
+async def get_supported_rag_system_types():
+    """지원하는 RAG 시스템 타입 목록 조회"""
+    try:
+        supported_types = rag_system_factory.get_supported_types()
+        return {
+            "supported_types": [str(t) for t in supported_types],
+            "descriptions": {
+                "openai_rag": "OpenAI API를 사용하는 RAG 시스템",
+                "langchain_rag": "LangChain 기반 RAG 시스템",
+                "llamaindex_rag": "LlamaIndex 기반 RAG 시스템", 
+                "custom_http": "커스텀 HTTP API RAG 시스템",
+                "mock": "테스트용 Mock RAG 시스템"
+            }
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"RAG 시스템 타입 조회 실패: {str(e)}"
+        )
+
+
+@router.get("/rag-systems/templates/{system_type}")
+async def get_rag_system_template(system_type: str):
+    """특정 RAG 시스템 타입의 설정 템플릿 조회"""
+    try:
+        templates = {
+            "openai_rag": {
+                "name": "openai-rag",
+                "system_type": "openai_rag",
+                "base_url": "https://api.openai.com/v1",
+                "api_key": "your-openai-api-key",
+                "timeout": 60.0,
+                "required_fields": ["api_key"],
+                "optional_fields": ["base_url", "timeout"]
+            },
+            "langchain_rag": {
+                "name": "langchain-rag",
+                "system_type": "langchain_rag",
+                "base_url": "http://your-langchain-server:8000",
+                "api_key": "optional-api-key",
+                "auth_type": "api_key",
+                "auth_header": "X-API-Key",
+                "search_endpoint": "/search",
+                "embed_endpoint": "/embeddings",
+                "required_fields": ["base_url"],
+                "optional_fields": ["api_key", "auth_type", "auth_header"]
+            },
+            "llamaindex_rag": {
+                "name": "llamaindex-rag", 
+                "system_type": "llamaindex_rag",
+                "base_url": "http://your-llamaindex-server:8000",
+                "api_key": "optional-api-key",
+                "search_endpoint": "/v1/query",
+                "embed_endpoint": "/v1/embeddings",
+                "required_fields": ["base_url"],
+                "optional_fields": ["api_key"]
+            },
+            "custom_http": {
+                "name": "custom-rag",
+                "system_type": "custom_http",
+                "base_url": "http://your-rag-server:8000",
+                "api_key": "optional-api-key",
+                "search_endpoint": "/api/v1/search",
+                "embed_endpoint": "/api/v1/embed",
+                "query_field": "query",
+                "k_field": "k",
+                "results_field": "results",
+                "content_field": "content",
+                "score_field": "score",
+                "filepath_field": "filepath",
+                "required_fields": ["base_url"],
+                "optional_fields": ["api_key", "search_endpoint", "embed_endpoint", "query_field", "k_field"]
+            },
+            "mock": {
+                "name": "mock-rag",
+                "system_type": "mock",
+                "base_url": "http://localhost:8000",
+                "required_fields": [],
+                "optional_fields": []
+            }
+        }
+        
+        if system_type not in templates:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"지원하지 않는 RAG 시스템 타입: {system_type}"
+            )
+        
+        return templates[system_type]
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"템플릿 조회 실패: {str(e)}"
         )
 
 

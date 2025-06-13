@@ -9,16 +9,20 @@ class MockRAGSystem(RAGSystemInterface):
     
     def __init__(
         self, 
+        config=None,  # 호환성을 위해 선택적 매개변수
         embedding_dim: int = 768,
         simulate_delay: bool = True,
         failure_rate: float = 0.0
     ):
         """
         Args:
+            config: RAG 시스템 설정 (선택적)
             embedding_dim: 임베딩 차원 수
             simulate_delay: 네트워크 지연 시뮬레이션 여부
             failure_rate: 실패율 (0.0 ~ 1.0)
         """
+        if config:
+            super().__init__(config)
         self.embedding_dim = embedding_dim
         self.simulate_delay = simulate_delay
         self.failure_rate = failure_rate
@@ -168,6 +172,10 @@ class MockRAGSystem(RAGSystemInterface):
     def clear_documents(self):
         """모든 문서 제거 (테스트용)"""
         self.documents.clear()
+    
+    async def close(self):
+        """리소스 정리 (Mock은 정리할 것이 없음)"""
+        pass
     
     def __repr__(self):
         return f"<MockRAGSystem(docs={len(self.documents)}, dim={self.embedding_dim})>" 

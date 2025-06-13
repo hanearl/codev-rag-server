@@ -48,17 +48,52 @@ class RetrievalResult(BaseModel):
 
 
 class SystemConfig(BaseModel):
-    """RAG 시스템 설정"""
+    """RAG 시스템 설정 (기존 호환성)"""
     name: str
     base_url: str
     api_key: Optional[str] = None
-    system_type: str = "external"  # external, mock, local
+    system_type: str = "external"  # external, mock, local, openai_rag, langchain_rag, llamaindex_rag
+
+
+class AdvancedSystemConfig(BaseModel):
+    """고급 RAG 시스템 설정"""
+    name: str
+    system_type: str  # openai_rag, langchain_rag, llamaindex_rag, custom_http, mock
+    base_url: str
+    api_key: Optional[str] = None
+    timeout: float = 30.0
+    max_retries: int = 3
+    
+    # API 엔드포인트 커스터마이징
+    search_endpoint: str = "/api/v1/search"
+    embed_endpoint: str = "/api/v1/embed"
+    health_endpoint: str = "/health"
+    
+    # 요청 형식 커스터마이징
+    query_field: str = "query"
+    k_field: str = "k"
+    text_field: str = "text"
+    
+    # 응답 형식 커스터마이징
+    results_field: str = "results"
+    content_field: str = "content"
+    score_field: str = "score"
+    filepath_field: str = "filepath"
+    metadata_field: str = "metadata"
+    embedding_field: str = "embedding"
+    
+    # 인증 설정
+    auth_type: str = "bearer"  # bearer, api_key, basic, none
+    auth_header: str = "Authorization"
+    
+    # 추가 헤더
+    custom_headers: Dict[str, str] = {}
 
 
 class EvaluationRequest(BaseModel):
     """평가 요청"""
     dataset_name: str
-    system_config: SystemConfig
+    system_config: Union[SystemConfig, AdvancedSystemConfig]
     k_values: List[int] = [1, 3, 5, 10]
     metrics: List[str] = ["recall", "precision", "hit", "mrr", "ndcg"]
     options: EvaluationOptions = EvaluationOptions()

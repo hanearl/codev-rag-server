@@ -1,55 +1,62 @@
 import httpx
 import logging
 from typing import List, Dict, Any, Optional
-from app.features.systems.interface import RAGSystemInterface, RetrievalResult
+from app.features.systems.interface import RAGSystemInterface, RetrievalResult, RAGSystemConfig
 
 logger = logging.getLogger(__name__)
 
 
-class HTTPRAGSystem(RAGSystemInterface):
-    """HTTP API 기반 RAG 시스템 클라이언트"""
+class GenericHTTPRAGSystem(RAGSystemInterface):
+    """범용 HTTP API 기반 RAG 시스템 어댑터"""
     
-    def __init__(
-        self, 
-        base_url: str, 
-        api_key: Optional[str] = None,
-        timeout: float = 30.0,
-        max_retries: int = 3
-    ):
+    def __init__(self, config: RAGSystemConfig):
         """
         Args:
-            base_url: RAG 시스템의 기본 URL
-            api_key: API 인증 키 (선택적)
-            timeout: 요청 타임아웃 (초)
-            max_retries: 최대 재시도 횟수
+            config: RAG 시스템 설정
         """
-        self.base_url = base_url.rstrip('/')
-        self.api_key = api_key
-        self.timeout = timeout
-        self.max_retries = max_retries
+        super().__init__(config)
+        self.base_url = config.base_url.rstrip('/')
         
         # HTTP 클라이언트 설정
         headers = {"Content-Type": "application/json"}
-        if api_key:
-            headers["Authorization"] = f"Bearer {api_key}"
+        
+        # 인증 헤더 설정
+        if config.api_key:
+            if config.auth_type == "bearer":
+                headers[config.auth_header] = f"Bearer {config.api_key}"
+            elif config.auth_type == "api_key":
+                headers[config.auth_header] = config.api_key
+            elif config.auth_type == "basic":
+                import base64
+                credentials = base64.b64encode(f":{config.api_key}".encode()).decode()
+                headers[config.auth_header] = f"Basic {credentials}"
+        
+        # 커스텀 헤더 추가
+        headers.update(config.custom_headers)
             
         self.client = httpx.AsyncClient(
             base_url=self.base_url,
             headers=headers,
-            timeout=timeout
+            timeout=config.timeout
         )
     
     async def embed_query(self, query: str) -> List[float]:
         """쿼리 임베딩 생성"""
         try:
+            # 요청 데이터 구성
+            request_data = {
+                self.config.request_format.text_field: query
+            }
+            request_data.update(self.config.request_format.additional_fields)
+            
             response = await self.client.post(
-                "/api/v1/embed",
-                json={"text": query}
+                self.config.endpoints.embed,
+                json=request_data
             )
             response.raise_for_status()
             
             data = response.json()
-            return data.get("embedding", [])
+            return data.get(self.config.response_format.embedding_field, [])
             
         except httpx.HTTPError as e:
             logger.error(f"임베딩 생성 오류: {e}")
@@ -61,24 +68,31 @@ class HTTPRAGSystem(RAGSystemInterface):
     async def retrieve(self, query: str, top_k: int = 10) -> List[RetrievalResult]:
         """검색 수행"""
         try:
+            # 요청 데이터 구성
+            request_data = {
+                self.config.request_format.query_field: query,
+                self.config.request_format.k_field: top_k
+            }
+            request_data.update(self.config.request_format.additional_fields)
+            
             response = await self.client.post(
-                "/api/v1/search",
-                json={
-                    "query": query,
-                    "k": top_k
-                }
+                self.config.endpoints.search,
+                json=request_data
             )
             response.raise_for_status()
             
             data = response.json()
             results = []
             
-            for item in data.get("results", []):
+            # 응답 형식에 따라 결과 파싱
+            items = data.get(self.config.response_format.results_field, [])
+            
+            for item in items:
                 result = RetrievalResult(
-                    content=item.get("content", ""),
-                    score=float(item.get("score", 0.0)),
-                    filepath=item.get("filepath"),
-                    metadata=item.get("metadata", {})
+                    content=item.get(self.config.response_format.content_field, ""),
+                    score=float(item.get(self.config.response_format.score_field, 0.0)),
+                    filepath=item.get(self.config.response_format.filepath_field),
+                    metadata=item.get(self.config.response_format.metadata_field, {})
                 )
                 results.append(result)
             
@@ -94,7 +108,7 @@ class HTTPRAGSystem(RAGSystemInterface):
     async def health_check(self) -> bool:
         """시스템 상태 확인"""
         try:
-            response = await self.client.get("/health")
+            response = await self.client.get(self.config.endpoints.health)
             return response.status_code == 200
             
         except Exception as e:
@@ -104,7 +118,7 @@ class HTTPRAGSystem(RAGSystemInterface):
     async def get_system_info(self) -> Dict[str, Any]:
         """시스템 정보 조회"""
         try:
-            response = await self.client.get("/api/v1/info")
+            response = await self.client.get(self.config.endpoints.info)
             if response.status_code == 200:
                 return response.json()
             else:
@@ -119,4 +133,29 @@ class HTTPRAGSystem(RAGSystemInterface):
         await self.client.aclose()
     
     def __repr__(self):
-        return f"<HTTPRAGSystem(base_url='{self.base_url}')>" 
+        return f"<GenericHTTPRAGSystem(name='{self.config.name}', type='{self.config.system_type}')>"
+
+
+# 기존 HTTPRAGSystem을 호환성을 위해 유지
+class HTTPRAGSystem(GenericHTTPRAGSystem):
+    """기존 HTTPRAGSystem (호환성 유지)"""
+    
+    def __init__(
+        self, 
+        base_url: str, 
+        api_key: Optional[str] = None,
+        timeout: float = 30.0,
+        max_retries: int = 3
+    ):
+        """기존 방식 호환성 유지"""
+        from app.features.systems.interface import RAGSystemConfig, RAGSystemType
+        
+        config = RAGSystemConfig(
+            name="legacy-http-system",
+            system_type=RAGSystemType.CUSTOM_HTTP,
+            base_url=base_url,
+            api_key=api_key,
+            timeout=timeout,
+            max_retries=max_retries
+        )
+        super().__init__(config) 
