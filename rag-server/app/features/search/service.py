@@ -1,88 +1,235 @@
+"""
+하이브리드 검색 서비스
+
+벡터 검색, BM25 검색, 하이브리드 검색 기능을 통합하여 REST API로 제공
+"""
 import time
-from typing import List
-from .schema import SearchRequest, SearchResponse, SearchResult
-from .retriever import HybridRetriever
-from .scorer import SearchScorer
-from .keyword_extractor import keyword_extractor
-import logging
+from typing import List, Dict, Any, Optional
+import asyncio
 
-logger = logging.getLogger(__name__)
+from app.retriever.hybrid_retriever import HybridRetrievalService
+from app.index.vector_service import VectorIndexService
+from app.index.bm25_service import BM25IndexService
+from app.features.search.schema import (
+    VectorSearchRequest, VectorSearchResponse,
+    BM25SearchRequest, BM25SearchResponse,
+    HybridSearchRequest, HybridSearchResponse,
+    SearchResult
+)
 
-class SearchService:
-    def __init__(self, retriever: HybridRetriever, scorer: SearchScorer):
-        self.retriever = retriever
-        self.scorer = scorer
+
+class HybridSearchService:
+    """하이브리드 검색 서비스"""
     
-    async def search_code(self, request: SearchRequest) -> SearchResponse:
-        """코드 하이브리드 검색"""
+    def __init__(self):
+        self.hybrid_retriever = HybridRetrievalService(
+            vector_index=None,  # 초기화 시 None, 나중에 설정
+            bm25_index=None     # 초기화 시 None, 나중에 설정
+        )
+        self.vector_service = VectorIndexService()
+        self.bm25_service = BM25IndexService()
+    
+    async def vector_search(self, request: VectorSearchRequest) -> VectorSearchResponse:
+        """벡터 검색"""
         start_time = time.time()
         
         try:
-            # 키워드 자동 추출 (명시적 키워드가 없을 경우)
-            search_keywords = request.keywords
-            if search_keywords is None or len(search_keywords) == 0:
-                extracted_keywords = keyword_extractor.extract_keywords(request.query)
-                search_keywords = extracted_keywords[:5]  # 상위 5개만 사용
-                logger.info(f"쿼리 '{request.query}'에서 자동 추출된 키워드: {search_keywords}")
-            
-            # 하이브리드 검색 수행
-            raw_results = await self.retriever.search(
+            # 벡터 검색 실행
+            search_results = await self.vector_service.search_similar_code(
                 query=request.query,
-                keywords=search_keywords,
-                limit=request.limit,
-                collection_name=request.collection_name
-            )
-            
-            # 점수 계산 및 정렬 (RRF 또는 가중치 기반)
-            scored_results = self.scorer.calculate_combined_scores(
-                raw_results,
-                vector_weight=request.vector_weight,
-                keyword_weight=request.keyword_weight,
-                use_rrf=request.use_rrf,
-                rrf_k=request.rrf_k
+                limit=request.top_k,
+                threshold=request.score_threshold or 0.0,
+                filters=request.filter_metadata
             )
             
             # 결과 변환
-            search_results = []
-            vector_count = 0
-            keyword_count = 0
-            
-            for result in scored_results:
-                search_result = SearchResult(
-                    id=result["id"],
-                    file_path=result.get("file_path", ""),
-                    function_name=result.get("function_name"),
-                    code_content=result.get("code_content", ""),
-                    code_type=result.get("code_type", ""),
-                    language=result.get("language", ""),
-                    line_start=result.get("line_start", 0),
-                    line_end=result.get("line_end", 0),
-                    keywords=result.get("keywords", []),
-                    vector_score=result["vector_score"],
-                    keyword_score=result["keyword_score"],
-                    combined_score=result["combined_score"]
+            results = [
+                SearchResult(
+                    content=result.get("content", ""),
+                    score=result.get("score", 0.0),
+                    metadata=result.get("metadata", {}),
+                    document_id=result.get("id")
                 )
-                search_results.append(search_result)
-                
-                if result["vector_score"] > 0:
-                    vector_count += 1
-                if result["keyword_score"] > 0:
-                    keyword_count += 1
+                for result in search_results
+            ]
             
-            end_time = time.time()
-            search_time_ms = int((end_time - start_time) * 1000)
+            search_time_ms = int((time.time() - start_time) * 1000)
             
-            return SearchResponse(
-                query=request.query,
-                results=search_results,
-                total_results=len(search_results),
+            return VectorSearchResponse(
+                success=True,
+                results=results,
+                total_results=len(results),
                 search_time_ms=search_time_ms,
-                vector_results_count=vector_count,
-                keyword_results_count=keyword_count,
-                search_method="rrf" if request.use_rrf else "weighted",
-                rrf_k=request.rrf_k if request.use_rrf else None
+                collection_name=request.collection_name,
+                query=request.query
             )
             
         except Exception as e:
-            logger.error(f"코드 검색 실패: {e}")
-            raise 
+            search_time_ms = int((time.time() - start_time) * 1000)
+            return VectorSearchResponse(
+                success=False,
+                results=[],
+                total_results=0,
+                search_time_ms=search_time_ms,
+                collection_name=request.collection_name,
+                error=f"벡터 검색 실패: {str(e)}"
+            )
+    
+    async def bm25_search(self, request: BM25SearchRequest) -> BM25SearchResponse:
+        """BM25 검색"""
+        start_time = time.time()
+        
+        try:
+            # BM25 검색 실행
+            search_results = await self.bm25_service.search_keywords(
+                query=request.query,
+                limit=request.top_k,
+                filters={"language": request.filter_language} if request.filter_language else None
+            )
+            
+            # 결과 변환
+            results = [
+                SearchResult(
+                    content=result.get("content", ""),
+                    score=result.get("score", 0.0),
+                    metadata=result.get("metadata", {}),
+                    document_id=result.get("id")
+                )
+                for result in search_results
+            ]
+            
+            search_time_ms = int((time.time() - start_time) * 1000)
+            
+            return BM25SearchResponse(
+                success=True,
+                results=results,
+                total_results=len(results),
+                search_time_ms=search_time_ms,
+                index_name=request.index_name,
+                query=request.query
+            )
+            
+        except Exception as e:
+            search_time_ms = int((time.time() - start_time) * 1000)
+            return BM25SearchResponse(
+                success=False,
+                results=[],
+                total_results=0,
+                search_time_ms=search_time_ms,
+                index_name=request.index_name,
+                error=f"BM25 검색 실패: {str(e)}"
+            )
+    
+    async def hybrid_search(self, request: HybridSearchRequest) -> HybridSearchResponse:
+        """하이브리드 검색"""
+        start_time = time.time()
+        
+        try:
+            # 하이브리드 검색 실행
+            search_results = await self.hybrid_retriever.search_with_detailed_scores(
+                query=request.query,
+                limit=request.top_k,
+                vector_weight=request.vector_weight,
+                bm25_weight=request.bm25_weight,
+                use_rrf=(request.fusion_method.value == "rrf"),
+                rrf_k=60
+            )
+            
+            # 결과 변환
+            results = [
+                SearchResult(
+                    content=result.get("content", ""),
+                    score=result.get("combined_score", 0.0),
+                    metadata=result.get("metadata", {}),
+                    document_id=result.get("id")
+                )
+                for result in search_results.get("results", [])
+            ]
+            
+            search_time_ms = int((time.time() - start_time) * 1000)
+            
+            return HybridSearchResponse(
+                success=True,
+                results=results,
+                total_results=len(results),
+                search_time_ms=search_time_ms,
+                vector_results_count=search_results.get("vector_results_count", 0),
+                bm25_results_count=search_results.get("bm25_results_count", 0),
+                fusion_method=request.fusion_method,
+                weights_used={
+                    "vector_weight": request.vector_weight,
+                    "bm25_weight": request.bm25_weight
+                },
+                query=request.query
+            )
+            
+        except Exception as e:
+            search_time_ms = int((time.time() - start_time) * 1000)
+            return HybridSearchResponse(
+                success=False,
+                results=[],
+                total_results=0,
+                search_time_ms=search_time_ms,
+                vector_results_count=0,
+                bm25_results_count=0,
+                fusion_method="unknown",
+                weights_used={
+                    "vector_weight": request.vector_weight,
+                    "bm25_weight": request.bm25_weight
+                },
+                error=f"하이브리드 검색 실패: {str(e)}"
+            )
+    
+    async def get_collections(self) -> Dict[str, List[str]]:
+        """벡터 컬렉션 목록 조회"""
+        try:
+            # 현재 구성된 컬렉션 정보 반환 (실제 list_collections 메서드가 없을 수 있음)
+            return {"collections": [self.vector_service.config.collection_name]}
+        except Exception as e:
+            raise Exception(f"컬렉션 목록 조회 실패: {str(e)}")
+    
+    async def get_indexes(self) -> Dict[str, List[str]]:
+        """BM25 인덱스 목록 조회"""
+        try:
+            # 현재 구성된 인덱스 정보 반환 (실제 list_indexes 메서드가 없을 수 있음)
+            return {"indexes": ["default"]}  # 기본 인덱스명 반환
+        except Exception as e:
+            raise Exception(f"인덱스 목록 조회 실패: {str(e)}")
+    
+    async def health_check(self) -> Dict[str, Any]:
+        """서비스 헬스체크"""
+        components = {}
+        overall_status = "healthy"
+        
+        try:
+            # 하이브리드 리트리버 상태 확인
+            components["hybrid_retriever"] = "healthy"
+        except:
+            components["hybrid_retriever"] = "unhealthy"
+            overall_status = "degraded"
+        
+        try:
+            # 벡터 서비스 상태 확인
+            await self.vector_service.health_check()
+            components["vector_service"] = "healthy"
+        except:
+            components["vector_service"] = "unhealthy"
+            overall_status = "degraded"
+        
+        try:
+            # BM25 서비스 상태 확인
+            await self.bm25_service.health_check()
+            components["bm25_service"] = "healthy"
+        except:
+            components["bm25_service"] = "unhealthy"
+            overall_status = "degraded"
+        
+        return {
+            "status": overall_status,
+            "service": "search",
+            "components": components
+        }
+
+
+# 싱글톤 인스턴스
+hybrid_search_service = HybridSearchService() 

@@ -1,11 +1,8 @@
 from functools import lru_cache
 from .clients import EmbeddingClient, VectorClient, LLMClient
 from .config import settings
-from app.features.indexing.parser_factory import CodeParserFactory
-from app.features.indexing.service import IndexingService
-from app.features.search.retriever import HybridRetriever
-from app.features.search.scorer import SearchScorer
-from app.features.search.service import SearchService
+from app.features.indexing.service import HybridIndexingService
+from app.features.search.service import HybridSearchService
 
 # prompts 모듈 임포트 추가
 from app.features.prompts.repository import PromptRepository
@@ -46,33 +43,13 @@ def get_llm_client() -> LLMClient:
         max_retries=settings.max_retries
     )
 
-@lru_cache()
-def get_parser_factory() -> CodeParserFactory:
-    return CodeParserFactory()
 
-def get_indexing_service() -> IndexingService:
-    return IndexingService(
-        embedding_client=get_embedding_client(),
-        vector_client=get_vector_client(),
-        parser_factory=get_parser_factory()
-    )
 
-@lru_cache()
-def get_search_retriever() -> HybridRetriever:
-    return HybridRetriever(
-        embedding_client=get_embedding_client(),
-        vector_client=get_vector_client()
-    )
+def get_indexing_service() -> HybridIndexingService:
+    return HybridIndexingService()
 
-@lru_cache()
-def get_search_scorer() -> SearchScorer:
-    return SearchScorer()
-
-def get_search_service() -> SearchService:
-    return SearchService(
-        retriever=get_search_retriever(),
-        scorer=get_search_scorer()
-    )
+def get_search_service() -> HybridSearchService:
+    return HybridSearchService()
 
 # prompts 모듈 의존성
 @lru_cache()

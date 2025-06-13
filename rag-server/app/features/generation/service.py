@@ -2,8 +2,8 @@ from typing import List
 from .schema import GenerationRequest, GenerationResponse, CodeContext
 from .generator import CodeGenerator
 from .validator import CodeValidator
-from app.features.search.service import SearchService
-from app.features.search.schema import SearchRequest
+from app.features.search.service import HybridSearchService
+from app.features.search.schema import HybridSearchRequest
 import logging
 
 logger = logging.getLogger(__name__)
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class GenerationService:
     def __init__(
         self, 
-        search_service: SearchService,
+        search_service: HybridSearchService,
         generator: CodeGenerator,
         validator: CodeValidator
     ):
@@ -41,26 +41,28 @@ class GenerationService:
             raise
     
     async def _get_contexts(self, request: GenerationRequest) -> List[CodeContext]:
-        """관련 컨텍스트 수집 (기존 SearchService 활용)"""
-        search_request = SearchRequest(
+        """관련 컨텍스트 수집 (기존 HybridSearchService 활용)"""
+        search_request = HybridSearchRequest(
             query=request.query,
-            limit=request.context_limit,
+            collection_name="default",  # 기본 컬렉션 사용
+            index_name="default",       # 기본 인덱스 사용
+            top_k=request.context_limit,
             vector_weight=request.vector_weight,
-            keyword_weight=request.keyword_weight,
-            use_rrf=request.use_rrf
+            bm25_weight=getattr(request, 'keyword_weight', 0.3),
+            use_rrf=getattr(request, 'use_rrf', True)
         )
         
-        search_response = await self.search_service.search_code(search_request)
+        search_response = await self.search_service.hybrid_search(search_request)
         
         contexts = []
         for result in search_response.results:
             context = CodeContext(
-                function_name=result.function_name,
-                code_content=result.code_content,
-                file_path=result.file_path,
-                relevance_score=result.combined_score,
-                code_type=result.code_type,
-                language=result.language
+                function_name=result.metadata.get('function_name', ''),
+                code_content=result.content,
+                file_path=result.metadata.get('file_path', ''),
+                relevance_score=result.score,
+                code_type=result.metadata.get('code_type', ''),
+                language=result.metadata.get('language', '')
             )
             contexts.append(context)
         

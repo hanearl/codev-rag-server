@@ -1,241 +1,242 @@
+"""
+하이브리드 인덱싱 API 라우터 TDD 테스트
+"""
 import pytest
-from unittest.mock import Mock, AsyncMock, patch
 from fastapi.testclient import TestClient
-from datetime import datetime
+from unittest.mock import AsyncMock, Mock, patch
+from typing import Dict, Any
 
 from app.main import app
-from app.features.indexing.service import IndexingService
-from app.features.indexing.schema import IndexingResponse, BatchIndexingResponse
 
-@pytest.fixture
-def mock_indexing_service():
-    service = Mock(spec=IndexingService)
-    return service
+client = TestClient(app)
 
-@pytest.fixture
-def client():
-    return TestClient(app)
 
-def test_index_file_endpoint_should_return_success(mock_indexing_service, client):
-    """파일 인덱싱 엔드포인트가 성공 응답을 반환해야 함"""
-    # Given
-    mock_response = IndexingResponse(
-        file_path="test.py",
-        chunks_count=2,
-        message="인덱싱 성공: 2개 청크 처리",
-        indexed_at=datetime.now()
-    )
-    mock_indexing_service.index_file = AsyncMock(return_value=mock_response)
+class TestHybridIndexingRouter:
+    """하이브리드 인덱싱 API 라우터 테스트"""
     
-    # Mock 의존성 주입
-    from app.core.dependencies import get_indexing_service
-    app.dependency_overrides[get_indexing_service] = lambda: mock_indexing_service
+    @pytest.fixture
+    def sample_parse_request(self):
+        """샘플 파싱 요청 데이터"""
+        return {
+            "code": "public class TestClass { public void testMethod() {} }",
+            "language": "java",
+            "file_path": "TestClass.java",
+            "extract_methods": True,
+            "extract_classes": True,
+            "extract_functions": True,
+            "extract_imports": True
+        }
     
-    # When
-    response = client.post("/api/v1/indexing/file", json={
-        "file_path": "test.py",
-        "force_update": False
-    })
+    @pytest.fixture
+    def sample_document_build_request(self):
+        """샘플 문서 빌드 요청 데이터"""
+        return {
+            "ast_results": [
+                {
+                    "documents": [],
+                    "nodes": [],
+                    "metadata": {"file_path": "test.java"},
+                    "total_chunks": 5,
+                    "parse_time_ms": 100
+                }
+            ],
+            "chunking_strategy": "method_level",
+            "chunk_size": 1000,
+            "chunk_overlap": 200,
+            "include_metadata": True,
+            "enhance_content": True
+        }
     
-    # Then
-    assert response.status_code == 200
-    data = response.json()
-    assert data["chunks_count"] == 2
-    assert data["file_path"] == "test.py"
-    assert "성공" in data["message"]
+    @pytest.fixture
+    def sample_indexing_request(self):
+        """샘플 인덱싱 요청 데이터"""
+        return {
+            "documents": [
+                {
+                    "content": "public void testMethod() { System.out.println(\"test\"); }",
+                    "metadata": {
+                        "file_path": "Test.java",
+                        "language": "java",
+                        "code_type": "method"
+                    }
+                }
+            ],
+            "collection_name": "test_collection",
+            "batch_size": 100,
+            "update_existing": False
+        }
     
-    # Cleanup
-    app.dependency_overrides.clear()
-
-def test_index_file_endpoint_should_handle_file_not_found(mock_indexing_service, client):
-    """파일 인덱싱 엔드포인트가 파일 없음 오류를 처리해야 함"""
-    # Given
-    mock_indexing_service.index_file = AsyncMock(
-        side_effect=FileNotFoundError("파일을 찾을 수 없습니다")
-    )
+    def test_parse_code_api_should_return_success(self, sample_parse_request):
+        """코드 파싱 API가 성공 응답을 반환해야 함"""
+        # Given & When
+        response = client.post("/api/v1/indexing/parse", json=sample_parse_request)
+        
+        # Then
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] == True
+        assert "ast_info" in data
+        assert "parse_time_ms" in data
     
-    from app.core.dependencies import get_indexing_service
-    app.dependency_overrides[get_indexing_service] = lambda: mock_indexing_service
+    def test_parse_code_api_should_handle_invalid_language(self):
+        """잘못된 언어 파라미터에 대해 400 에러를 반환해야 함"""
+        # Given
+        invalid_request = {
+            "code": "test code",
+            "language": "invalid_language"
+        }
+        
+        # When
+        response = client.post("/api/v1/indexing/parse", json=invalid_request)
+        
+        # Then
+        assert response.status_code == 400
+        assert "잘못된 요청" in response.json()["detail"]
     
-    # When
-    response = client.post("/api/v1/indexing/file", json={
-        "file_path": "nonexistent.py"
-    })
-    
-    # Then
-    assert response.status_code == 404
-    data = response.json()
-    assert "파일을 찾을 수 없습니다" in data["detail"]
-    
-    # Cleanup
-    app.dependency_overrides.clear()
-
-def test_batch_index_endpoint_should_return_batch_results(mock_indexing_service, client):
-    """배치 인덱싱 엔드포인트가 배치 결과를 반환해야 함"""
-    # Given
-    mock_response = BatchIndexingResponse(
-        total_files=2,
-        successful_files=2,
-        failed_files=0,
-        total_chunks=4,
-        results=[],
-        errors=[]
-    )
-    mock_indexing_service.index_batch = AsyncMock(return_value=mock_response)
-    
-    from app.core.dependencies import get_indexing_service
-    app.dependency_overrides[get_indexing_service] = lambda: mock_indexing_service
-    
-    # When
-    response = client.post("/api/v1/indexing/batch", json={
-        "file_paths": ["test1.py", "test2.py"],
-        "force_update": False
-    })
-    
-    # Then
-    assert response.status_code == 200
-    data = response.json()
-    assert data["total_files"] == 2
-    assert data["successful_files"] == 2
-    assert data["total_chunks"] == 4
-
-def test_query_chunks_endpoint_should_return_chunks(mock_indexing_service):
-    """청크 조회 엔드포인트가 청크 목록을 반환해야 함"""
-    # Given
-    from app.features.indexing.schema import ChunkQueryResponse, CodeChunkResponse
-    from datetime import datetime
-    
-    mock_chunks = [
-        CodeChunkResponse(
-            id="chunk-1",
-            file_path="test.py",
-            function_name="test_func",
-            code_content="def test_func(): pass",
-            code_type="function",
-            language="python",
-            line_start=1,
-            line_end=1,
-            keywords=["test", "func"],
-            indexed_at=datetime.now()
+    def test_parse_files_api_should_handle_multiple_files(self):
+        """여러 파일 일괄 파싱 API가 정상 동작해야 함"""
+        # Given
+        files = [
+            ("files", ("test1.java", "public class Test1 {}", "text/plain")),
+            ("files", ("test2.java", "public class Test2 {}", "text/plain"))
+        ]
+        
+        # When
+        response = client.post(
+            "/api/v1/indexing/parse/files",
+            files=files,
+            data={"language": "java"}
         )
-    ]
-    
-    mock_response = ChunkQueryResponse(
-        chunks=mock_chunks,
-        total=1,
-        page=1,
-        size=10,
-        total_pages=1
-    )
-    
-    mock_indexing_service.query_chunks = AsyncMock(return_value=mock_response)
-    
-    from app.core.dependencies import get_indexing_service
-    app.dependency_overrides[get_indexing_service] = lambda: mock_indexing_service
-    client = TestClient(app)
-    
-    try:
-        # When
-        response = client.get("/api/v1/indexing/chunks")
         
         # Then
         assert response.status_code == 200
         data = response.json()
-        assert len(data["chunks"]) == 1
-        assert data["total"] == 1
-        assert data["page"] == 1
-        assert data["chunks"][0]["file_path"] == "test.py"
-    finally:
-        app.dependency_overrides.clear()
-
-def test_query_chunks_endpoint_should_handle_filters(mock_indexing_service):
-    """청크 조회 엔드포인트가 필터를 처리해야 함"""
-    # Given
-    from app.features.indexing.schema import ChunkQueryResponse
-    from app.core.dependencies import get_indexing_service
+        assert isinstance(data, list)
+        assert len(data) == 2
+        for result in data:
+            assert "success" in result
     
-    mock_response = ChunkQueryResponse(
-        chunks=[],
-        total=0,
-        page=1,
-        size=5,
-        total_pages=0
-    )
-    
-    mock_indexing_service.query_chunks = AsyncMock(return_value=mock_response)
-    
-    app.dependency_overrides[get_indexing_service] = lambda: mock_indexing_service
-    client = TestClient(app)
-    
-    try:
-        # When
-        response = client.get("/api/v1/indexing/chunks", params={
-            "file_path": "test.py",
-            "code_type": "function",
-            "language": "python",
-            "keyword": "test",
-            "page": 1,
-            "size": 5
-        })
+    def test_build_documents_api_should_return_success(self, sample_document_build_request):
+        """문서 빌드 API가 성공 응답을 반환해야 함"""
+        # Given & When
+        response = client.post("/api/v1/indexing/documents/build", json=sample_document_build_request)
         
         # Then
         assert response.status_code == 200
         data = response.json()
-        assert data["total"] == 0
-        assert data["page"] == 1
-        assert data["size"] == 5
-        
-        # 서비스가 올바른 파라미터로 호출되었는지 확인
-        mock_indexing_service.query_chunks.assert_called_once()
-        call_args = mock_indexing_service.query_chunks.call_args[0][0]
-        assert call_args.file_path == "test.py"
-        assert call_args.code_type == "function"
-        assert call_args.language == "python"
-        assert call_args.keyword == "test"
-        assert call_args.page == 1
-        assert call_args.size == 5
-    finally:
-        app.dependency_overrides.clear()
-
-def test_query_chunks_endpoint_should_handle_error(mock_indexing_service):
-    """청크 조회 엔드포인트가 오류를 처리해야 함"""
-    # Given
-    from app.core.dependencies import get_indexing_service
+        assert data["success"] == True
+        assert "documents" in data
+        assert "document_count" in data
+        assert "build_time_ms" in data
     
-    mock_indexing_service.query_chunks = AsyncMock(side_effect=Exception("조회 오류"))
-    
-    app.dependency_overrides[get_indexing_service] = lambda: mock_indexing_service
-    client = TestClient(app)
-    
-    try:
-        # When
-        response = client.get("/api/v1/indexing/chunks")
+    def test_create_vector_index_api_should_return_success(self, sample_indexing_request):
+        """벡터 인덱스 생성 API가 성공 응답을 반환해야 함"""
+        # Given & When
+        response = client.post("/api/v1/indexing/vector/index", json=sample_indexing_request)
         
         # Then
-        assert response.status_code == 500
+        assert response.status_code == 200
         data = response.json()
-        assert "청크 조회 중 오류가 발생했습니다" in data["detail"]
-    finally:
-        app.dependency_overrides.clear()
-
-def test_health_check_endpoint_should_return_healthy(client):
-    """헬스체크 엔드포인트가 정상 응답을 반환해야 함"""
-    # When
-    response = client.get("/api/v1/indexing/health")
+        assert data["success"] == True
+        assert "indexed_count" in data
+        assert "collection_name" in data
+        assert "index_time_ms" in data
     
-    # Then
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "healthy"
-    assert data["service"] == "indexing"
-
-def test_index_file_endpoint_should_handle_validation_error(client):
-    """파일 인덱싱 엔드포인트가 검증 오류를 처리해야 함"""
-    # When
-    response = client.post("/api/v1/indexing/file", json={
-        # file_path 누락
-        "force_update": False
-    })
+    def test_create_bm25_index_api_should_return_success(self, sample_indexing_request):
+        """BM25 인덱스 생성 API가 성공 응답을 반환해야 함"""
+        # Given & When
+        response = client.post("/api/v1/indexing/bm25/index", json=sample_indexing_request)
+        
+        # Then
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] == True
+        assert "indexed_count" in data
+        assert "index_time_ms" in data
     
-    # Then
-    assert response.status_code == 422  # Validation Error 
+    def test_get_index_stats_api_should_return_stats(self):
+        """인덱스 통계 조회 API가 통계 정보를 반환해야 함"""
+        # Given & When
+        response = client.get("/api/v1/indexing/stats")
+        
+        # Then
+        assert response.status_code == 200
+        data = response.json()
+        assert "vector_index_stats" in data
+        assert "bm25_index_stats" in data
+        assert "total_documents" in data
+    
+    def test_delete_vector_collection_api_should_return_success(self):
+        """벡터 컬렉션 삭제 API가 성공 메시지를 반환해야 함"""
+        # Given
+        collection_name = "test_collection"
+        
+        # When
+        response = client.delete(f"/api/v1/indexing/vector/{collection_name}")
+        
+        # Then
+        assert response.status_code == 200
+        data = response.json()
+        assert "message" in data
+        assert collection_name in data["message"]
+    
+    def test_delete_bm25_index_api_should_return_success(self):
+        """BM25 인덱스 삭제 API가 성공 메시지를 반환해야 함"""
+        # Given
+        index_name = "test_index"
+        
+        # When
+        response = client.delete(f"/api/v1/indexing/bm25/{index_name}")
+        
+        # Then
+        assert response.status_code == 200
+        data = response.json()
+        assert "message" in data
+        assert index_name in data["message"]
+    
+    def test_indexing_health_check_should_return_healthy(self):
+        """인덱싱 서비스 헬스체크가 정상 상태를 반환해야 함"""
+        # Given & When
+        response = client.get("/api/v1/indexing/health")
+        
+        # Then
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] in ["healthy", "degraded"]
+        assert data["service"] == "indexing"
+        assert "components" in data
+    
+    def test_parse_code_api_should_handle_server_error(self, sample_parse_request):
+        """파싱 API가 서버 오류를 적절히 처리해야 함"""
+        # Given
+        with patch('app.features.indexing.service.HybridIndexingService.parse_code') as mock_parse:
+            mock_parse.side_effect = Exception("Test server error")
+            
+            # When
+            response = client.post("/api/v1/indexing/parse", json=sample_parse_request)
+            
+            # Then
+            assert response.status_code == 500
+            assert "코드 파싱 중 오류가 발생했습니다" in response.json()["detail"]
+    
+    def test_vector_index_api_should_handle_invalid_documents(self):
+        """벡터 인덱싱 API가 잘못된 문서를 적절히 처리해야 함"""
+        # Given
+        invalid_request = {
+            "documents": [],  # 빈 문서 리스트
+            "collection_name": ""  # 빈 컬렉션 이름
+        }
+        
+        # When
+        response = client.post("/api/v1/indexing/vector/index", json=invalid_request)
+        
+        # Then
+        assert response.status_code == 422  # Validation error
+    
+    def test_parse_files_api_should_handle_no_files(self):
+        """파일 파싱 API가 파일이 없는 경우를 적절히 처리해야 함"""
+        # Given & When
+        response = client.post("/api/v1/indexing/parse/files", files=[])
+        
+        # Then
+        assert response.status_code == 422  # Validation error 
