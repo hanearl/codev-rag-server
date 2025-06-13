@@ -29,8 +29,14 @@ async def vector_search(request: VectorSearchRequest):
     try:
         result = await hybrid_search_service.vector_search(request)
         if not result.success:
-            raise HTTPException(status_code=500, detail=result.error)
+            error_detail = getattr(result, 'error', None)
+            if error_detail:
+                raise HTTPException(status_code=500, detail=error_detail)
+            else:
+                raise HTTPException(status_code=500, detail="벡터 검색에 실패했습니다")
         return result
+    except HTTPException:
+        raise  # HTTPException은 그대로 전달
     except Exception as e:
         logger.error(f"벡터 검색 실패: {e}")
         raise HTTPException(status_code=500, detail=f"벡터 검색 실패: {str(e)}")

@@ -226,6 +226,10 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 ## 🧪 테스트 구조 규칙
 
+### ⚠️ **중요: 모든 테스트는 Docker Compose 환경에서 실행!**
+
+**마이크로서비스 간 통신이 있는 테스트는 반드시 Docker Compose 환경에서 실행해야 합니다.**
+
 각 서비스는 독립적인 테스트 구조를 가져야 합니다:
 ```
 {service}/tests/
@@ -235,8 +239,30 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 │   └── core/
 ├── integration/              ← 통합 테스트 (서비스 간 통신)
 │   └── test_service_integration.py
+├── e2e/                      ← End-to-End 테스트
+│   └── test_api_workflows.py
 └── conftest.py              ← 공통 fixture
 ```
+
+### Docker 기반 테스트 실행 방법
+
+```bash
+# 1. Docker Compose로 모든 서비스 실행
+docker-compose -f docker-compose.dev.yml up -d
+
+# 2. 서비스들이 준비될 때까지 대기
+sleep 30
+
+# 3. 테스트 실행
+docker-compose exec rag-server pytest tests/
+docker-compose exec embedding-server pytest tests/
+docker-compose exec llm-server pytest tests/
+
+# 4. 환경 정리
+docker-compose -f docker-compose.dev.yml down -v
+```
+
+자세한 내용은 [Docker 테스트 가이드](mdc:.cursor/rules/docker-testing-guide.mdc)를 참조하세요.
 
 ## 💡 개발 팁
 

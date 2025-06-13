@@ -1,0 +1,260 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# 🐳 Docker 기반 테스트 환경 가이드
+
+## 🚨 **필수 사항: 모든 테스트는 Docker Compose 환경에서 실행!**
+
+**⚠️ 절대 잊지 마세요: 이 프로젝트의 모든 서버 호출 테스트와 통합 테스트는 반드시 Docker Compose 환경에서 실행해야 합니다!**
+
+## 🎯 왜 Docker 환경에서 테스트해야 하나요?
+
+### 1. 마이크로서비스 간 네트워크 통신
+- embedding-server, llm-server, rag-server가 서로 HTTP 통신
+- Docker Compose 네트워크에서만 서비스 간 호스트명 해결 가능
+- 예: `http://embedding-server:8001`, `http://llm-server:8002`
+
+### 2. 실제 운영 환경과 동일한 조건
+- 실제 배포 환경과 100% 동일한 네트워크 설정
+- 포트 충돌 없이 모든 서비스 동시 실행
+- 환경 변수와 설정이 실제 운영 환경과 일치
+
+### 3. 데이터베이스 및 외부 서비스 연동
+- PostgreSQL, Qdrant(벡터DB) 등 외부 서비스와 연동
+- 독립적인 테스트 데이터베이스 환경 제공
+
+## 🛠 Docker Compose 테스트 환경 설정
+
+### 📄 테스트용 Docker Compose 파일
+
+현재 프로젝트에는 다음 Docker Compose 파일들이 있습니다:
+
+- [docker-compose.yml](mdc:docker-compose.yml) - 운영 환경용
+- [docker-compose.dev.yml](mdc:docker-compose.dev.yml) - 개발 환경용
+
+### 🔧 각 서비스별 Docker 설정
+
+각 서비스 디렉토리에는 다음 파일들이 있습니다:
+
+- [embedding-server/Dockerfile](mdc:embedding-server/Dockerfile)
+- [llm-server/Dockerfile](mdc:llm-server/Dockerfile)  
+- [rag-server/Dockerfile](mdc:rag-server/Dockerfile)
+
+## 🚀 Docker 환경에서 테스트 실행하는 방법
+
+### 1. 🏃‍♂️ 기본 테스트 실행 단계
+
+```bash
+# 1단계: Docker Compose로 모든 서비스 실행
+docker-compose -f docker-compose.dev.yml up -d
+
+# 2단계: 서비스들이 준비될 때까지 대기 (30초 정도)
+sleep 30
+
+# 3단계: 개별 서비스 테스트 실행
+docker-compose exec rag-server pytest tests/unit/
+docker-compose exec embedding-server pytest tests/unit/
+docker-compose exec llm-server pytest tests/unit/
+
+# 4단계: 통합 테스트 실행 (서비스 간 통신 테스트)
+docker-compose exec rag-server pytest tests/integration/
+
+# 5단계: 테스트 완료 후 환경 정리
+docker-compose -f docker-compose.dev.yml down -v
+```
+
+### 2. 🎯 특정 서비스만 테스트
+
+```bash
+# RAG 서버만 테스트
+docker-compose exec rag-server pytest tests/unit/features/search/
+
+# 임베딩 서버만 테스트  
+docker-compose exec embedding-server pytest tests/unit/features/embedding/
+
+# LLM 서버만 테스트
+docker-compose exec llm-server pytest tests/unit/features/chat/
+```
+
+### 3. 🔍 실시간 로그 확인
+
+```bash
+# 모든 서비스 로그 확인
+docker-compose -f docker-compose.dev.yml logs -f
+
+# 특정 서비스 로그만 확인
+docker-compose -f docker-compose.dev.yml logs -f rag-server
+```
+
+## ⚡ 빠른 테스트를 위한 스크립트
+
+### 테스트 자동화 스크립트 만들기
+
+각 서비스 디렉토리에 `run_tests.sh` 스크립트를 만들어 사용하세요:
+
+```bash
+#!/bin/bash
+# run_tests.sh
+
+echo "🐳 Docker Compose 환경에서 테스트 시작..."
+
+# Docker Compose 실행
+docker-compose -f ../docker-compose.dev.yml up -d
+
+# 서비스 준비 대기
+echo "⏳ 서비스 준비 중... (30초 대기)"
+sleep 30
+
+# 서비스 상태 확인
+echo "🔍 서비스 상태 확인:"
+docker-compose -f ../docker-compose.dev.yml ps
+
+# 테스트 실행
+echo "🧪 테스트 실행 중..."
+docker-compose -f ../docker-compose.dev.yml exec rag-server pytest tests/ -v
+
+# 정리
+echo "🧹 환경 정리 중..."
+docker-compose -f ../docker-compose.dev.yml down -v
+
+echo "✅ 테스트 완료!"
+```
+
+## 🚫 **절대 하지 말아야 할 것들**
+
+### ❌ 로컬에서 직접 서비스 실행하고 테스트
+
+```bash
+# 이렇게 하지 마세요!
+cd rag-server
+uvicorn app.main:app --reload &
+pytest tests/integration/  # ← 다른 서비스와 통신 불가!
+```
+
+### ❌ 일부 서비스만 Docker로 실행
+
+```bash
+# 이것도 안됩니다!
+docker-compose up rag-server  # ← embedding-server, llm-server 없음
+pytest tests/
+```
+
+### ❌ 테스트 후 Docker 환경 정리 안함
+
+```bash
+# 이전 테스트 환경이 남아있으면 포트 충돌 발생!
+docker-compose up -d  # ← 이전 컨테이너와 충돌
+```
+
+## ✅ **올바른 테스트 워크플로우**
+
+### 1. 🎬 테스트 시작 전 체크리스트
+
+- [ ] 이전 Docker 컨테이너들이 모두 정리되었는지 확인
+- [ ] Docker Compose 파일이 최신 상태인지 확인
+- [ ] 각 서비스의 `requirements.txt`가 업데이트되었는지 확인
+
+### 2. 🔄 테스트 실행 루틴
+
+```bash
+# 1. 이전 환경 정리
+docker-compose down -v
+docker system prune -f
+
+# 2. 새로운 환경 구성
+docker-compose -f docker-compose.dev.yml up -d
+
+# 3. 서비스 상태 확인
+curl http://localhost:8000/health  # rag-server
+curl http://localhost:8001/health  # embedding-server  
+curl http://localhost:8002/health  # llm-server
+
+# 4. 테스트 실행
+docker-compose exec rag-server pytest tests/ -v
+
+# 5. 정리
+docker-compose down -v
+```
+
+## 🐛 Docker 환경 트러블슈팅
+
+### 자주 발생하는 문제들
+
+#### 1. 포트 충돌 오류
+
+```bash
+Error: Port 8000 is already in use
+```
+
+**해결책:**
+```bash
+# 실행 중인 모든 컨테이너 확인
+docker ps -a
+
+# 특정 포트 사용 중인 프로세스 종료
+lsof -ti:8000 | xargs kill -9
+
+# 또는 모든 Docker 컨테이너 정리
+docker-compose down -v
+docker container prune -f
+```
+
+#### 2. 서비스 간 통신 실패
+
+```bash
+httpx.ConnectError: [Errno 111] Connection refused
+```
+
+**해결책:**
+```bash
+# 서비스가 완전히 준비되었는지 확인
+docker-compose logs rag-server
+docker-compose logs embedding-server
+
+# 네트워크 연결 상태 확인
+docker network ls
+docker network inspect <network_name>
+```
+
+#### 3. 의존성 설치 오류
+
+```bash
+ModuleNotFoundError: No module named 'some_package'
+```
+
+**해결책:**
+```bash
+# 이미지 재빌드
+docker-compose build --no-cache
+
+# requirements.txt 확인
+docker-compose exec rag-server pip list
+```
+
+## 📚 참고 자료
+
+### 관련 파일들
+
+- [docker-compose.yml](mdc:docker-compose.yml) - 기본 Docker Compose 설정
+- [docker-compose.dev.yml](mdc:docker-compose.dev.yml) - 개발 환경 설정
+- [rag-server/Dockerfile](mdc:rag-server/Dockerfile) - RAG 서버 Docker 설정
+- [rag-server/requirements.txt](mdc:rag-server/requirements.txt) - Python 의존성
+
+### 테스트 관련 파일들
+
+- [rag-server/tests/conftest.py](mdc:rag-server/tests/conftest.py) - 테스트 설정
+- [rag-server/tests/integration/](mdc:rag-server/tests/integration) - 통합 테스트
+- [rag-server/tests/unit/](mdc:rag-server/tests/unit) - 단위 테스트
+
+## 🎯 **기억해야 할 핵심 메시지**
+
+> **🔥 "서버 테스트 = Docker Compose 필수!" 🔥**
+> 
+> 테스트하기 전에 항상 물어보세요:
+> - "Docker Compose가 실행 중인가?"
+> - "모든 서비스가 준비되었나?"
+> - "테스트 후 환경을 정리했나?"
+
+**이 규칙을 지키지 않으면 테스트가 실패하거나 부정확한 결과가 나올 수 있습니다!**

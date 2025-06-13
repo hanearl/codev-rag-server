@@ -1,6 +1,5 @@
-from pydantic_settings import BaseSettings
+from pydantic import BaseSettings, Field
 from typing import Optional
-from pydantic import Field
 
 
 class Settings(BaseSettings):
@@ -20,10 +19,10 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
-    # 외부 서비스 설정
-    embedding_server_url: str = "http://localhost:8001"
-    llm_server_url: str = "http://localhost:8002"
-    vector_db_url: str = "http://localhost:6333"
+    # 외부 서비스 설정 (Docker 컨테이너 환경)
+    embedding_server_url: str = "http://embedding-server:8001"
+    llm_server_url: str = "http://llm-server:8002"
+    vector_db_url: str = "http://vector-db:6333"
     
     # 모델 설정
     embedding_model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
@@ -38,7 +37,7 @@ class Settings(BaseSettings):
     rag_server_port: str = "8000"
     
     # Qdrant 설정
-    qdrant_host: str = "localhost"
+    qdrant_host: str = "vector-db"  # Docker 컨테이너 내에서는 서비스 이름 사용
     qdrant_port: int = 6333
     qdrant_collection_name: str = "code_embeddings"
     

@@ -122,7 +122,7 @@ class BaseASTParser(ABC):
         """
         return Document(
             text=content,
-            metadata=metadata.dict(),
+            metadata=metadata.dict(),  # Pydantic V1 복원
             id_=f"{metadata.file_path}:{metadata.name}:{metadata.line_start}"
         )
     
@@ -139,6 +139,6 @@ class BaseASTParser(ABC):
         """
         return TextNode(
             text=content,
-            metadata=metadata.dict(),
+            metadata=metadata.dict(),  # Pydantic V1 복원
             id_=f"{metadata.file_path}:{metadata.name}:{metadata.line_start}"
         ) 

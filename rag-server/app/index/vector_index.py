@@ -23,7 +23,7 @@ class VectorIndexConfig:
     def __init__(
         self,
         collection_name: str = "code_vectors",
-        vector_size: int = 1536,  # OpenAI embedding size
+        vector_size: int = 384,  # sentence-transformers/all-MiniLM-L6-v2 embedding size
         distance: Distance = Distance.COSINE,
         qdrant_url: str = None,
         qdrant_port: int = 6333,
@@ -84,6 +84,13 @@ class CodeVectorIndex(BaseIndex):
             storage_context = StorageContext.from_defaults(
                 vector_store=self.vector_store
             )
+            
+            # 커스텀 임베딩 모델 설정 (embedding-server 연동)
+            from llama_index.core import Settings
+            from app.core.embedding import CustomEmbeddingModel
+            
+            # OpenAI 대신 커스텀 임베딩 모델 사용
+            Settings.embed_model = CustomEmbeddingModel()
             
             # Vector Index 생성 또는 로드
             try:

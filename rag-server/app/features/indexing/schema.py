@@ -107,9 +107,10 @@ class IndexingResponse(BaseModel):
 
 class IndexStatsResponse(BaseModel):
     """인덱스 통계 응답"""
-    vector_index_stats: Dict[str, Any]
-    bm25_index_stats: Dict[str, Any]
-    total_documents: int
+    vector_index_stats: Optional[Dict[str, Any]] = None
+    bm25_index_stats: Optional[Dict[str, Any]] = None
+    total_documents: int = 0
+    error_message: Optional[str] = None
 
 
 # 헬스체크 관련 스키마

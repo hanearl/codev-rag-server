@@ -75,6 +75,13 @@ class BM25SearchResponse(BaseModel):
 
 
 # 하이브리드 검색 관련 스키마
+class FusionMethod(str, Enum):
+    """융합 방법"""
+    RRF = "rrf"
+    WEIGHTED_SUM = "weighted_sum"
+    LINEAR_COMBINATION = "linear_combination"
+
+
 class HybridSearchRequest(BaseModel):
     """하이브리드 검색 요청"""
     query: str = Field(..., description="검색 쿼리", min_length=1)
@@ -83,6 +90,7 @@ class HybridSearchRequest(BaseModel):
     top_k: int = Field(10, description="반환할 결과 수", gt=0, le=100)
     vector_weight: float = Field(0.7, description="벡터 검색 가중치", ge=0.0, le=1.0)
     bm25_weight: float = Field(0.3, description="BM25 검색 가중치", ge=0.0, le=1.0)
+    fusion_method: FusionMethod = Field(FusionMethod.RRF, description="결과 융합 방법")
     use_rrf: bool = Field(True, description="RRF 사용 여부")
     rrf_k: int = Field(60, description="RRF 파라미터 k", gt=0)
     score_threshold: float = Field(0.0, description="최소 점수 임계값", ge=0.0, le=1.0)

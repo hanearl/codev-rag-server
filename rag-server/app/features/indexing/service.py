@@ -210,6 +210,9 @@ class HybridIndexingService:
             
         except Exception as e:
             return IndexStatsResponse(
+                vector_index_stats={},
+                bm25_index_stats={},
+                total_documents=0,
                 error_message=f"통계 조회 실패: {str(e)}"
             )
     

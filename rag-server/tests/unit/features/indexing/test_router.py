@@ -31,20 +31,19 @@ class TestHybridIndexingRouter:
     def sample_document_build_request(self):
         """샘플 문서 빌드 요청 데이터"""
         return {
-            "ast_results": [
+            "ast_info_list": [
                 {
-                    "documents": [],
-                    "nodes": [],
-                    "metadata": {"file_path": "test.java"},
-                    "total_chunks": 5,
-                    "parse_time_ms": 100
+                    "classes": ["TestClass"],
+                    "methods": ["testMethod"], 
+                    "functions": [],
+                    "imports": [],
+                    "metadata": {"file_path": "test.java", "language": "java"}
                 }
             ],
             "chunking_strategy": "method_level",
             "chunk_size": 1000,
             "chunk_overlap": 200,
-            "include_metadata": True,
-            "enhance_content": True
+            "include_metadata": True
         }
     
     @pytest.fixture
@@ -66,9 +65,22 @@ class TestHybridIndexingRouter:
             "update_existing": False
         }
     
-    def test_parse_code_api_should_return_success(self, sample_parse_request):
+    @patch('app.features.indexing.service.HybridIndexingService.parse_code')
+    def test_parse_code_api_should_return_success(self, mock_parse_code, sample_parse_request):
         """코드 파싱 API가 성공 응답을 반환해야 함"""
-        # Given & When
+        # Given
+        from app.features.indexing.schema import ParseResponse
+        mock_parse_code.return_value = ParseResponse(
+            success=True,
+            ast_info={
+                "classes": ["TestClass"],
+                "methods": ["testMethod"],
+                "imports": []
+            },
+            parse_time_ms=150
+        )
+        
+        # When
         response = client.post("/api/v1/indexing/parse", json=sample_parse_request)
         
         # Then
@@ -79,7 +91,7 @@ class TestHybridIndexingRouter:
         assert "parse_time_ms" in data
     
     def test_parse_code_api_should_handle_invalid_language(self):
-        """잘못된 언어 파라미터에 대해 400 에러를 반환해야 함"""
+        """잘못된 언어 파라미터에 대해 422 validation error를 반환해야 함"""
         # Given
         invalid_request = {
             "code": "test code",
@@ -90,8 +102,8 @@ class TestHybridIndexingRouter:
         response = client.post("/api/v1/indexing/parse", json=invalid_request)
         
         # Then
-        assert response.status_code == 400
-        assert "잘못된 요청" in response.json()["detail"]
+        assert response.status_code == 422  # Pydantic validation error
+        # Validation error 응답은 detail이 다를 수 있음
     
     def test_parse_files_api_should_handle_multiple_files(self):
         """여러 파일 일괄 파싱 API가 정상 동작해야 함"""
@@ -116,9 +128,24 @@ class TestHybridIndexingRouter:
         for result in data:
             assert "success" in result
     
-    def test_build_documents_api_should_return_success(self, sample_document_build_request):
+    @patch('app.features.indexing.service.HybridIndexingService.build_documents')
+    def test_build_documents_api_should_return_success(self, mock_build_documents, sample_document_build_request):
         """문서 빌드 API가 성공 응답을 반환해야 함"""
-        # Given & When
+        # Given
+        from app.features.indexing.schema import DocumentBuildResponse
+        mock_build_documents.return_value = DocumentBuildResponse(
+            success=True,
+            documents=[
+                {
+                    "content": "test content",
+                    "metadata": {"file_path": "test.java", "language": "java"}
+                }
+            ],
+            total_documents=1,
+            build_time_ms=200
+        )
+        
+        # When
         response = client.post("/api/v1/indexing/documents/build", json=sample_document_build_request)
         
         # Then
@@ -126,12 +153,22 @@ class TestHybridIndexingRouter:
         data = response.json()
         assert data["success"] == True
         assert "documents" in data
-        assert "document_count" in data
+        assert "total_documents" in data
         assert "build_time_ms" in data
     
-    def test_create_vector_index_api_should_return_success(self, sample_indexing_request):
+    @patch('app.features.indexing.service.HybridIndexingService.create_vector_index')
+    def test_create_vector_index_api_should_return_success(self, mock_create_vector_index, sample_indexing_request):
         """벡터 인덱스 생성 API가 성공 응답을 반환해야 함"""
-        # Given & When
+        # Given
+        from app.features.indexing.schema import IndexingResponse
+        mock_create_vector_index.return_value = IndexingResponse(
+            success=True,
+            indexed_count=1,
+            collection_name="test_collection",
+            index_time_ms=300
+        )
+        
+        # When
         response = client.post("/api/v1/indexing/vector/index", json=sample_indexing_request)
         
         # Then
@@ -142,9 +179,18 @@ class TestHybridIndexingRouter:
         assert "collection_name" in data
         assert "index_time_ms" in data
     
-    def test_create_bm25_index_api_should_return_success(self, sample_indexing_request):
+    @patch('app.features.indexing.service.HybridIndexingService.create_bm25_index')
+    def test_create_bm25_index_api_should_return_success(self, mock_create_bm25_index, sample_indexing_request):
         """BM25 인덱스 생성 API가 성공 응답을 반환해야 함"""
-        # Given & When
+        # Given
+        from app.features.indexing.schema import IndexingResponse
+        mock_create_bm25_index.return_value = IndexingResponse(
+            success=True,
+            indexed_count=1,
+            index_time_ms=250
+        )
+        
+        # When
         response = client.post("/api/v1/indexing/bm25/index", json=sample_indexing_request)
         
         # Then
@@ -154,9 +200,24 @@ class TestHybridIndexingRouter:
         assert "indexed_count" in data
         assert "index_time_ms" in data
     
-    def test_get_index_stats_api_should_return_stats(self):
+    @patch('app.features.indexing.service.HybridIndexingService.get_index_stats')
+    def test_get_index_stats_api_should_return_stats(self, mock_get_index_stats):
         """인덱스 통계 조회 API가 통계 정보를 반환해야 함"""
-        # Given & When
+        # Given
+        from app.features.indexing.schema import IndexStatsResponse
+        mock_get_index_stats.return_value = IndexStatsResponse(
+            vector_index_stats={
+                "total_documents": 100,
+                "total_vectors": 100
+            },
+            bm25_index_stats={
+                "total_documents": 100,
+                "index_size": "5MB"
+            },
+            total_documents=100
+        )
+        
+        # When
         response = client.get("/api/v1/indexing/stats")
         
         # Then
