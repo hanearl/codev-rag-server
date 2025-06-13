@@ -19,6 +19,7 @@ class RAGSystemType(str, Enum):
     LLAMAINDEX_RAG = "llamaindex_rag"
     CUSTOM_HTTP = "custom_http"
     RAG_SERVER = "rag_server"
+    CODEV_V1 = "codev_v1"
     MOCK = "mock"
 
 

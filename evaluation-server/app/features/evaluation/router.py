@@ -189,6 +189,7 @@ async def get_supported_rag_system_types():
                 "llamaindex_rag": "LlamaIndex 기반 RAG 시스템", 
                 "custom_http": "커스텀 HTTP API RAG 시스템",
                 "rag_server": "codev-rag-server (하이브리드 검색 + 코드 생성)",
+                "codev_v1": "Codev-v1 RAG 시스템 (인증 기반 검색)",
                 "mock": "테스트용 Mock RAG 시스템"
             }
         }
@@ -274,6 +275,30 @@ async def get_rag_system_template(system_type: str):
                 },
                 "required_fields": ["base_url"],
                 "optional_fields": ["api_key", "timeout"]
+            },
+            "codev_v1": {
+                "name": "codev-v1-rag",
+                "system_type": "codev_v1",
+                "base_url": "http://10.250.121.100:8008",
+                "timeout": 30.0,
+                "features": {
+                    "authentication": True,
+                    "bearer_token": True,
+                    "auto_reauth": True,
+                    "threshold_filtering": True
+                },
+                "auth_info": {
+                    "auth_endpoint": "/auth/v1/token",
+                    "search_endpoint": "/project/v1/repo/retrieval",
+                    "username": "corusadmin",
+                    "password": "superuser_P@s$w0rd"
+                },
+                "search_params": {
+                    "ids": [28],
+                    "threshold": 0.8
+                },
+                "required_fields": ["base_url"],
+                "optional_fields": ["timeout"]
             },
             "mock": {
                 "name": "mock-rag",

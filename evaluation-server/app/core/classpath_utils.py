@@ -53,6 +53,13 @@ class ClasspathConverter:
                 classpath_parts = path_parts[i:]
                 return ".".join(classpath_parts)
         
+        # 특별한 경우: /sample-pjt/src/main/java/ 패턴 처리
+        for i, part in enumerate(path_parts):
+            if part == "src" and i + 2 < len(path_parts) and path_parts[i + 1] == "main" and path_parts[i + 2] == "java":
+                if i + 3 < len(path_parts):
+                    classpath_parts = path_parts[i + 3:]
+                    return ".".join(classpath_parts)
+        
         # 마지막 방법: 파일명만 사용
         return path_parts[-1] if path_parts else None
     

@@ -4,6 +4,7 @@ from app.features.systems.interface import RAGSystemInterface, RAGSystemConfig, 
 from app.features.systems.http_client import GenericHTTPRAGSystem
 from app.features.systems.openai_adapter import OpenAIRAGAdapter, LangChainRAGAdapter, LlamaIndexRAGAdapter
 from app.features.systems.rag_server_adapter import RAGServerAdapter
+from app.features.systems.codev_v1_adapter import CodevV1RAGAdapter
 from app.features.systems.mock_client import MockRAGSystem
 
 logger = logging.getLogger(__name__)
@@ -19,6 +20,7 @@ class RAGSystemFactory:
             RAGSystemType.LLAMAINDEX_RAG: LlamaIndexRAGAdapter,
             RAGSystemType.CUSTOM_HTTP: GenericHTTPRAGSystem,
             RAGSystemType.RAG_SERVER: RAGServerAdapter,
+            RAGSystemType.CODEV_V1: CodevV1RAGAdapter,
             RAGSystemType.MOCK: MockRAGSystem
         }
     
@@ -161,6 +163,16 @@ class RAGSystemTemplates:
             system_type=RAGSystemType.RAG_SERVER,
             base_url=base_url,
             api_key=api_key,
+            timeout=30.0
+        )
+    
+    @staticmethod
+    def codev_v1(base_url: str = "http://10.250.121.100:8008") -> RAGSystemConfig:
+        """Codev-v1 RAG 설정"""
+        return RAGSystemConfig(
+            name="codev-v1-rag",
+            system_type=RAGSystemType.CODEV_V1,
+            base_url=base_url,
             timeout=30.0
         )
     

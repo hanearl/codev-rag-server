@@ -101,6 +101,9 @@ class EvaluationService:
                         ground_truth = self._convert_ground_truth_to_classpaths(
                             question.answer, request.options
                         )
+                        logger.info(f"질문: {question.question[:50]}...")
+                        logger.info(f"변환된 예측값: {predictions[:3]}")
+                        logger.info(f"변환된 정답: {ground_truth}")
                     else:
                         ground_truth = question.answer if isinstance(question.answer, list) else [question.answer]
                     
@@ -204,6 +207,11 @@ class EvaluationService:
                 api_key=getattr(system_config, 'api_key', None)
             )
             return create_rag_system(config)
+        elif system_config.system_type == "codev_v1":
+            config = RAGSystemTemplates.codev_v1(
+                base_url=system_config.base_url
+            )
+            return create_rag_system(config)
         else:
             # 기본값: 커스텀 HTTP
             config = RAGSystemTemplates.custom_http_rag(
@@ -227,17 +235,21 @@ class EvaluationService:
                 # 파일패스가 있으면 사용, 없으면 content에서 추출 시도
                 if i < len(retrieval_results) and retrieval_results[i].filepath:
                     filepath = retrieval_results[i].filepath
+                    logger.info(f"원본 파일패스: {filepath}")
                     classpath = self.classpath_converter.filepath_to_classpath(filepath)
+                    logger.info(f"변환된 클래스패스: {classpath}")
                     
                     # 메서드명 제거 옵션 적용
                     if options.ignore_method_names and classpath:
                         classpath = self.classpath_converter.extract_class_from_classpath(
                             classpath, ignore_method=True
                         )
+                        logger.info(f"메서드명 제거 후: {classpath}")
                     
                     converted_predictions.append(classpath or prediction)
                 else:
                     # 파일패스가 없으면 원본 사용
+                    logger.info(f"파일패스 없음, 원본 사용: {prediction}")
                     converted_predictions.append(prediction)
                     
             except Exception as e:
