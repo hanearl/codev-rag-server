@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 class RAGServerAdapter(RAGSystemInterface):
-    """codev-rag-server 전용 어댑터"""
+    """codev-rag-server 전용 어댑터 (레거시 - 하이브리드 검색 사용)"""
     
     def __init__(self, config: RAGSystemConfig):
         super().__init__(config)

@@ -1,0 +1,60 @@
+{
+  "name": "Java Development Combined RAG Evaluation Dataset",
+  "description": "Java 개발 Q&A와 코딩 작업을 통합한 RAG 시스템 평가용 데이터셋",
+  "version": "1.0.0",
+  "language": "ko",
+  "domain": "java_development_combined",
+  "query_count": 201,
+  "ground_truth_format": "inline",
+  "data_format": {
+    "fields": [
+      "difficulty",
+      "question",
+      "answer"
+    ],
+    "answer_type": "java_classpath",
+    "supports_multiple_answers": true
+  },
+  "evaluation_options": {
+    "convert_filepath_to_classpath": true,
+    "ignore_method_names": false,
+    "case_sensitive": false
+  },
+  "difficulty_levels": [
+    "하",
+    "중",
+    "상"
+  ],
+  "created_at": "2024-01-15T00:00:00Z",
+  "created_by": "evaluation-server",
+  "license": "MIT",
+  "source": "manually_created",
+  "evaluation_metrics": [
+    "recall@k",
+    "precision@k",
+    "hit@k",
+    "ndcg@k"
+  ],
+  "recommended_k_values": [
+    1,
+    3,
+    5,
+    10
+  ],
+  "notes": "Java 개발 Q&A와 코딩 작업을 통합한 종합적인 클래스패스 검색 평가 데이터셋입니다. 도서관 시스템의 다양한 컴포넌트 질문과 특정 기능 구현 작업을 모두 포함합니다.",
+  "statistics": {
+    "difficulty_distribution": {
+      "하": 107,
+      "중": 73,
+      "상": 21
+    },
+    "answer_type_distribution": {
+      "single_answer": 56,
+      "multiple_answers": 145
+    },
+    "source_distribution": {
+      "qa_questions": 101,
+      "coding_tasks": 100
+    }
+  }
+}
