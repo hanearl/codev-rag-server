@@ -308,3 +308,232 @@ docker run -p 8003:8000 \
 ---
 
 **RAG Evaluation Server**는 Java 개발 환경에 특화된 RAG 시스템 평가 도구입니다. 파일 경로를 클래스패스로 자동 변환하고, 메서드명 제외 옵션 등을 통해 보다 정확한 평가를 제공합니다. 
+
+## 🔧 지원하는 RAG 시스템
+
+### 1. RAG 서버 어댑터 (신규)
+
+**rag-server**의 새로운 API 구조에 맞춰 3가지 검색 타입을 지원합니다:
+
+#### 벡터 검색 (Vector Search)
+- **시스템 타입**: `RAG_SERVER_VECTOR`
+- **특징**: 의미 기반 유사도 검색
+- **엔드포인트**: `/api/v1/search/vector`
+- **사용 사례**: 자연어 의미 이해가 중요한 검색
+
+#### BM25 검색 (Keyword Search)  
+- **시스템 타입**: `RAG_SERVER_BM25`
+- **특징**: 키워드 기반 통계적 검색
+- **엔드포인트**: `/api/v1/search/bm25`
+- **사용 사례**: 정확한 키워드 매칭이 중요한 검색
+
+#### 하이브리드 검색 (Hybrid Search)
+- **시스템 타입**: `RAG_SERVER_HYBRID`
+- **특징**: 벡터 + BM25 검색 결합
+- **엔드포인트**: `/api/v1/search/hybrid`
+- **사용 사례**: 의미와 키워드를 모두 고려한 정확한 검색
+
+### 2. 기타 지원 시스템
+
+- OpenAI RAG
+- LangChain RAG  
+- LlamaIndex RAG
+- 커스텀 HTTP RAG
+- Codev V1 RAG
+- Mock RAG (테스트용)
+
+## 📖 사용 방법
+
+### 빠른 시작
+
+```python
+from app.features.systems.factory import (
+    create_rag_server_vector,
+    create_rag_server_bm25,
+    create_rag_server_hybrid,
+    create_all_rag_server_systems
+)
+
+# 1. 벡터 검색 시스템
+vector_system = create_rag_server_vector(
+    base_url="http://rag-server:8000",
+    collection_name="code_chunks"
+)
+
+# 2. BM25 검색 시스템  
+bm25_system = create_rag_server_bm25(
+    base_url="http://rag-server:8000",
+    index_name="code_index"
+)
+
+# 3. 하이브리드 검색 시스템
+hybrid_system = create_rag_server_hybrid(
+    base_url="http://rag-server:8000",
+    collection_name="code_chunks",
+    index_name="code_index",
+    vector_weight=0.7,
+    bm25_weight=0.3,
+    use_rrf=True
+)
+
+# 4. 모든 시스템 한번에 생성
+all_systems = create_all_rag_server_systems(
+    base_url="http://rag-server:8000"
+)
+
+# 검색 수행
+async def search_example():
+    query = "파이썬 함수 정의"
+    
+    # 벡터 검색
+    vector_results = await vector_system.retrieve(query, top_k=10)
+    
+    # BM25 검색
+    bm25_results = await bm25_system.retrieve(query, top_k=10)
+    
+    # 하이브리드 검색
+    hybrid_results = await hybrid_system.retrieve(query, top_k=10)
+    
+    # 시스템 정리
+    await vector_system.close()
+    await bm25_system.close()
+    await hybrid_system.close()
+```
+
+### 설정 템플릿 사용
+
+```python
+from app.features.systems.factory import RAGSystemTemplates, create_rag_system
+
+# 벡터 검색 설정
+vector_config = RAGSystemTemplates.rag_server_vector(
+    base_url="http://localhost:8000",
+    collection_name="my_collection"
+)
+
+# BM25 검색 설정
+bm25_config = RAGSystemTemplates.rag_server_bm25(
+    base_url="http://localhost:8000", 
+    index_name="my_index"
+)
+
+# 하이브리드 검색 설정 (고급)
+hybrid_config = RAGSystemTemplates.rag_server_hybrid(
+    base_url="http://localhost:8000",
+    vector_weight=0.8,
+    bm25_weight=0.2,
+    use_rrf=False  # RRF 대신 가중합 사용
+)
+
+# 시스템 생성
+vector_system = create_rag_system(vector_config)
+bm25_system = create_rag_system(bm25_config)
+hybrid_system = create_rag_system(hybrid_config)
+```
+
+### 평가 실행
+
+```python
+from app.features.evaluations.service import evaluation_service
+
+# 모든 RAG 시스템 등록
+systems = {
+    "rag-server-vector": create_rag_server_vector(),
+    "rag-server-bm25": create_rag_server_bm25(),
+    "rag-server-hybrid": create_rag_server_hybrid(),
+}
+
+# 평가 실행
+results = []
+for name, system in systems.items():
+    result = await evaluation_service.run_evaluation(
+        system=system,
+        dataset_name="code_search_dataset",
+        metrics=["precision", "recall", "f1", "mrr"]
+    )
+    results.append(result)
+
+# 결과 비교
+comparison = await evaluation_service.compare_systems(results)
+```
+
+## ⚙️ 하이브리드 검색 설정
+
+하이브리드 검색은 다양한 융합 방법과 가중치를 지원합니다:
+
+### 융합 방법 (Fusion Methods)
+
+1. **RRF (Reciprocal Rank Fusion)** - 권장
+   ```python
+   hybrid_config = RAGSystemTemplates.rag_server_hybrid(
+       use_rrf=True,
+       rrf_k=60  # RRF 파라미터
+   )
+   ```
+
+2. **가중합 (Weighted Sum)**
+   ```python
+   hybrid_config = RAGSystemTemplates.rag_server_hybrid(
+       use_rrf=False,
+       vector_weight=0.7,
+       bm25_weight=0.3
+   )
+   ```
+
+### 권장 가중치 설정
+
+| 사용 사례 | 벡터 가중치 | BM25 가중치 | 설명 |
+|----------|------------|------------|------|
+| 의미 중심 검색 | 0.8 | 0.2 | 자연어 질의에 적합 |
+| 균형 잡힌 검색 | 0.7 | 0.3 | 일반적인 코드 검색 |
+| 키워드 중심 검색 | 0.4 | 0.6 | 정확한 함수/클래스명 검색 |
+
+## 🔍 검색 결과 분석
+
+각 어댑터는 다음과 같은 메타데이터를 제공합니다:
+
+### 벡터 검색 결과
+```python
+{
+    "search_type": "vector",
+    "search_time_ms": 120,
+    "document_id": "doc_123",
+    "similarity_score": 0.85
+}
+```
+
+### BM25 검색 결과  
+```python
+{
+    "search_type": "bm25", 
+    "search_time_ms": 80,
+    "document_id": "doc_456",
+    "bm25_score": 12.34
+}
+```
+
+### 하이브리드 검색 결과
+```python
+{
+    "search_type": "hybrid",
+    "fusion_method": "rrf",
+    "weights_used": {"vector": 0.7, "bm25": 0.3},
+    "vector_results_count": 15,
+    "bm25_results_count": 12,
+    "search_time_ms": 150
+}
+```
+
+## 🧪 예제 실행
+
+전체 사용 예제는 다음 파일에서 확인할 수 있습니다:
+
+```bash
+python docs/rag_server_adapters_usage.py
+```
+
+이 예제는 다음을 포함합니다:
+- 각 검색 타입별 사용법
+- 시스템 비교 방법
+- 설정 템플릿 활용법
+- 시스템 정보 조회 방법

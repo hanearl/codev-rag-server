@@ -71,7 +71,7 @@ class GenericHTTPRAGSystem(RAGSystemInterface):
             # 요청 데이터 구성
             request_data = {
                 self.config.request_format.query_field: query,
-                self.config.request_format.k_field: top_k
+                self.config.request_format.top_k_field: top_k
             }
             request_data.update(self.config.request_format.additional_fields)
             

@@ -202,7 +202,25 @@ class EvaluationService:
             )
             return create_rag_system(config)
         elif system_config.system_type == "rag_server":
-            config = RAGSystemTemplates.rag_server(
+            config = RAGSystemTemplates.rag_server_hybrid(
+                base_url=system_config.base_url,
+                api_key=getattr(system_config, 'api_key', None)
+            )
+            return create_rag_system(config)
+        elif system_config.system_type == "rag_server_vector":
+            config = RAGSystemTemplates.rag_server_vector(
+                base_url=system_config.base_url,
+                api_key=getattr(system_config, 'api_key', None)
+            )
+            return create_rag_system(config)
+        elif system_config.system_type == "rag_server_bm25":
+            config = RAGSystemTemplates.rag_server_bm25(
+                base_url=system_config.base_url,
+                api_key=getattr(system_config, 'api_key', None)
+            )
+            return create_rag_system(config)
+        elif system_config.system_type == "rag_server_hybrid":
+            config = RAGSystemTemplates.rag_server_hybrid(
                 base_url=system_config.base_url,
                 api_key=getattr(system_config, 'api_key', None)
             )
