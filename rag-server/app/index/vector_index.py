@@ -1,5 +1,5 @@
 from typing import List, Dict, Any, Optional, Union
-from llama_index.core import VectorStoreIndex, StorageContext
+from llama_index.core import VectorStoreIndex, StorageContext, Settings
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from llama_index.core.schema import TextNode, NodeWithScore
 from llama_index.core.retrievers import VectorIndexRetriever
@@ -16,6 +16,8 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+# LlamaIndex 전역 설정에서 LLM 비활성화
+Settings.llm = None
 
 class VectorIndexConfig:
     """Vector Index 설정"""
@@ -85,23 +87,24 @@ class CodeVectorIndex(BaseIndex):
                 vector_store=self.vector_store
             )
             
-            # 커스텀 임베딩 모델 설정 (embedding-server 연동)
-            from llama_index.core import Settings
+            # 커스텀 임베딩 모델 생성
             from app.core.embedding import CustomEmbeddingModel
-            
-            # OpenAI 대신 커스텀 임베딩 모델 사용
-            Settings.embed_model = CustomEmbeddingModel()
+            embed_model = CustomEmbeddingModel()
             
             # Vector Index 생성 또는 로드
             try:
                 self.index = VectorStoreIndex.from_vector_store(
-                    vector_store=self.vector_store
+                    vector_store=self.vector_store,
+                    embed_model=embed_model,
+                    llm=None
                 )
             except Exception:
                 # 빈 인덱스 생성
                 self.index = VectorStoreIndex(
                     nodes=[],
-                    storage_context=storage_context
+                    storage_context=storage_context,
+                    embed_model=embed_model,
+                    llm=None
                 )
             
             # Retriever 생성
@@ -110,10 +113,10 @@ class CodeVectorIndex(BaseIndex):
                 similarity_top_k=self.config.similarity_top_k
             )
             
-            # Query Engine 생성 (선택적)
-            self.query_engine = RetrieverQueryEngine(
-                retriever=self.retriever
-            )
+            # Query Engine은 LLM이 필요하므로 제거
+            # self.query_engine = RetrieverQueryEngine(
+            #     retriever=self.retriever
+            # )
             
             logger.info(f"Vector Index 초기화 완료: {self.config.collection_name}")
             

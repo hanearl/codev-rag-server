@@ -231,9 +231,11 @@ class HybridRetrievalService(BaseRetrieverInterface):
     async def setup(self) -> None:
         """리트리버 초기화"""
         if not self._initialized:
-            # 인덱스들 초기화
-            await self.vector_index.setup()
-            await self.bm25_index.setup()
+            # 인덱스들 초기화 (setup 메서드가 있는 경우에만)
+            if hasattr(self.vector_index, 'setup'):
+                await self.vector_index.setup()
+            if hasattr(self.bm25_index, 'setup'):
+                await self.bm25_index.setup()
             
             # 하이브리드 리트리버 생성
             self.hybrid_retriever = CodeHybridRetriever(
@@ -298,45 +300,62 @@ class HybridRetrievalService(BaseRetrieverInterface):
         vector_weight: float = None,
         bm25_weight: float = None,
         use_rrf: bool = None,
-        rrf_k: int = None
+        rrf_k: int = None,
+        collection_name: str = None,
+        index_name: str = None
     ) -> Dict[str, Any]:
         """상세 점수와 함께 검색"""
         await self.setup()
         
-        # 임시로 설정 변경
-        original_config = {}
-        if vector_weight is not None:
-            original_config['vector_weight'] = self.hybrid_retriever.vector_weight
-            self.hybrid_retriever.vector_weight = vector_weight
-        
-        if bm25_weight is not None:
-            original_config['bm25_weight'] = self.hybrid_retriever.bm25_weight
-            self.hybrid_retriever.bm25_weight = bm25_weight
-        
-        if use_rrf is not None:
-            original_config['use_rrf'] = self.hybrid_retriever.use_rrf
-            self.hybrid_retriever.use_rrf = use_rrf
-        
-        if rrf_k is not None:
-            original_config['rrf_k'] = self.hybrid_retriever.rrf_k
-            self.hybrid_retriever.rrf_k = rrf_k
-        
         try:
             start_time = time.time()
             
-            # 개별 검색 결과 수집
-            vector_results = await self.vector_index.search_with_scores(query, limit=50)
-            bm25_results = await self.bm25_index.search_with_scores(query, limit=50)
+            # 개별 검색 결과 수집 - 실제 서비스 메서드 사용
+            vector_results = await self.vector_index.search_similar_code(
+                query=query,
+                limit=50,
+                threshold=0.0,
+                collection_name=collection_name
+            )
+            
+            bm25_results = await self.bm25_index.search_keywords(
+                query=query,
+                collection_name=index_name or collection_name,
+                limit=50
+            )
+            
+            # 결과를 표준 형식으로 변환
+            vector_formatted = [
+                {
+                    "id": result.get("id", ""),
+                    "content": result.get("content", ""),
+                    "score": result.get("score", 0.0),
+                    "metadata": result.get("metadata", {})
+                }
+                for result in vector_results
+            ]
+            
+            bm25_formatted = [
+                {
+                    "id": result.get("id", ""),
+                    "content": result.get("content", ""),
+                    "score": result.get("score", 0.0),
+                    "metadata": result.get("metadata", {})
+                }
+                for result in bm25_results
+            ]
             
             # 결합 결과 계산
-            if self.hybrid_retriever.use_rrf:
-                combined_results = self.hybrid_retriever.scoring_strategy.reciprocal_rank_fusion(
-                    vector_results, bm25_results, self.hybrid_retriever.rrf_k
+            scoring_strategy = HybridScoringStrategy()
+            
+            if use_rrf if use_rrf is not None else True:
+                combined_results = scoring_strategy.reciprocal_rank_fusion(
+                    vector_formatted, bm25_formatted, rrf_k or 60
                 )
             else:
-                combined_results = self.hybrid_retriever.scoring_strategy.weighted_average(
-                    vector_results, bm25_results,
-                    self.hybrid_retriever.vector_weight, self.hybrid_retriever.bm25_weight
+                combined_results = scoring_strategy.weighted_average(
+                    vector_formatted, bm25_formatted,
+                    vector_weight or 0.7, bm25_weight or 0.3
                 )
             
             end_time = time.time()
@@ -345,26 +364,28 @@ class HybridRetrievalService(BaseRetrieverInterface):
             return {
                 "query": query,
                 "results": combined_results[:limit],
-                "search_metadata": {
-                    "vector_results_count": len(vector_results),
-                    "bm25_results_count": len(bm25_results),
-                    "combined_results_count": len(combined_results),
-                    "search_time_ms": search_time,
-                    "scoring_method": "rrf" if self.hybrid_retriever.use_rrf else "weighted",
-                    "vector_weight": self.hybrid_retriever.vector_weight,
-                    "bm25_weight": self.hybrid_retriever.bm25_weight,
-                    "rrf_k": self.hybrid_retriever.rrf_k if self.hybrid_retriever.use_rrf else None
-                },
-                "individual_results": {
-                    "vector": vector_results[:10],
-                    "bm25": bm25_results[:10]
+                "vector_results_count": len(vector_formatted),
+                "bm25_results_count": len(bm25_formatted),
+                "search_time_ms": search_time,
+                "fusion_method": "rrf" if (use_rrf if use_rrf is not None else True) else "weighted",
+                "weights_used": {
+                    "vector_weight": vector_weight or 0.7,
+                    "bm25_weight": bm25_weight or 0.3
                 }
             }
             
-        finally:
-            # 원래 설정 복원
-            for key, value in original_config.items():
-                setattr(self.hybrid_retriever, key, value)
+        except Exception as e:
+            logger.error(f"하이브리드 검색 실패: {e}")
+            return {
+                "query": query,
+                "results": [],
+                "vector_results_count": 0,
+                "bm25_results_count": 0,
+                "search_time_ms": 0,
+                "fusion_method": "error",
+                "weights_used": {},
+                "error": str(e)
+            }
     
     async def compare_scoring_methods(
         self,

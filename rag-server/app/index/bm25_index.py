@@ -46,15 +46,16 @@ class CodeTokenizer:
         self.stemmer = PorterStemmer()
         self.stop_words = set(stopwords.words(language))
         
-        # 코드 특화 불용어 추가
+        # 코드 특화 불용어 추가 (최소한으로 제한)
         self.code_stop_words = {
             'public', 'private', 'protected', 'static', 'final', 'void',
-            'class', 'interface', 'extends', 'implements', 'import',
-            'package', 'return', 'if', 'else', 'for', 'while', 'try',
-            'catch', 'throw', 'throws', 'new', 'this', 'super',
-            'const', 'let', 'var', 'function', 'def', 'async', 'await',
+            'extends', 'implements', 'import', 'package', 
+            'if', 'else', 'for', 'while', 'try', 'catch', 'throw', 'throws',
+            'new', 'this', 'super', 'return',
+            'const', 'let', 'var', 'async', 'await',
             'true', 'false', 'null', 'undefined', 'none'
         }
+        # 중요한 키워드들은 불용어에서 제외: class, function, def, interface, controller 등
         self.stop_words.update(self.code_stop_words)
     
     def tokenize(self, text: str) -> List[str]:
@@ -297,24 +298,94 @@ class CodeBM25Index(BaseIndex):
         )
     
     def _build_retriever(self):
-        """BM25 Retriever 구성"""
+        """BM25 Retriever 구성 (하이브리드 방식: 커스텀 전처리 + 기본 토크나이저)"""
         if not self.nodes:
             self.retriever = None
             return
         
         try:
-            # 커스텀 토크나이저를 사용하여 BM25Retriever 생성
+            # 📌 하이브리드 방식: 커스텀 토크나이저의 전처리 기능을 활용한 노드 생성
+            enhanced_nodes = self._create_enhanced_nodes_for_bm25()
+            
+            # 기본 토크나이저를 사용하여 BM25Retriever 생성 (안정성 확보)
             self.retriever = BM25Retriever.from_defaults(
-                nodes=self.nodes,
-                tokenizer=self.tokenizer.tokenize,
+                nodes=enhanced_nodes,
                 similarity_top_k=self.config.top_k
             )
             
-            logger.debug(f"BM25 Retriever 구성 완료: {len(self.nodes)}개 노드")
+            # BM25 파라미터 강제 설정
+            if hasattr(self.retriever, 'bm25') and self.retriever.bm25:
+                self.retriever.bm25.k1 = self.config.k1
+                self.retriever.bm25.b = self.config.b
+                logger.debug(f"BM25 파라미터 설정: k1={self.config.k1}, b={self.config.b}")
+            
+            logger.debug(f"BM25 Retriever 구성 완료: {len(enhanced_nodes)}개 노드 (하이브리드 전처리 적용)")
             
         except Exception as e:
             logger.error(f"BM25 Retriever 구성 실패: {e}")
             self.retriever = None
+    
+    def _create_enhanced_nodes_for_bm25(self) -> List[TextNode]:
+        """BM25를 위한 향상된 노드 생성 (커스텀 토크나이저의 장점 활용)"""
+        enhanced_nodes = []
+        
+        for node in self.nodes:
+            # ✨ 커스텀 토크나이저의 핵심 기능들을 활용하여 검색 친화적 텍스트 생성
+            enhanced_text = self._enhance_text_for_search(node.text)
+            
+            # 향상된 텍스트로 새 노드 생성
+            enhanced_node = TextNode(
+                text=enhanced_text,
+                metadata=node.metadata,
+                id_=node.id_
+            )
+            enhanced_nodes.append(enhanced_node)
+        
+        return enhanced_nodes
+    
+    def _enhance_text_for_search(self, original_text: str) -> str:
+        """검색을 위한 텍스트 향상 (커스텀 토크나이저 기능 활용)"""
+        # 1. 원본 텍스트 유지
+        enhanced_parts = [original_text]
+        
+        # 2. 커스텀 전처리 적용 (CamelCase 분리, snake_case 분리 등)
+        preprocessed = self.tokenizer._preprocess_code(original_text)
+        enhanced_parts.append(preprocessed)
+        
+        # 3. 주요 키워드 추출 및 강조 (가중치 증가)
+        try:
+            important_tokens = self._extract_important_keywords(original_text)
+            if important_tokens:
+                # 중요 키워드들을 여러 번 반복하여 가중치 증가
+                enhanced_parts.extend(important_tokens * 2)  # 2번 반복으로 가중치 증가
+        except Exception as e:
+            logger.debug(f"키워드 추출 실패: {e}")
+        
+        # 4. 모든 부분을 공백으로 연결
+        return " ".join(enhanced_parts)
+    
+    def _extract_important_keywords(self, text: str) -> List[str]:
+        """중요 키워드 추출 (클래스명, 메서드명, 어노테이션 등)"""
+        import re
+        keywords = []
+        
+        # 클래스명 추출 (class 다음의 단어)
+        class_matches = re.findall(r'\bclass\s+(\w+)', text, re.IGNORECASE)
+        keywords.extend(class_matches)
+        
+        # 메서드명 추출 (함수명())
+        method_matches = re.findall(r'\b(\w+)\s*\(', text)
+        keywords.extend(method_matches)
+        
+        # 어노테이션 추출 (@RestController 등)
+        annotation_matches = re.findall(r'@(\w+)', text)
+        keywords.extend(annotation_matches)
+        
+        # Controller, Service 등 중요 접미사
+        important_suffixes = re.findall(r'\b(\w*(?:Controller|Service|Repository|Component|Entity|DTO|Interface))\b', text, re.IGNORECASE)
+        keywords.extend(important_suffixes)
+        
+        return list(set(keywords))  # 중복 제거
     
     async def search(self, query: str, limit: int = 10, filters: Dict[str, Any] = None) -> List[IndexedDocument]:
         """BM25 검색"""
@@ -355,27 +426,34 @@ class CodeBM25Index(BaseIndex):
     async def search_with_scores(self, query: str, limit: int = 10, filters: Dict[str, Any] = None) -> List[Dict[str, Any]]:
         """점수와 함께 BM25 검색"""
         if not self.retriever or not query.strip():
+            logger.warning(f"BM25 검색 중단: retriever={self.retriever is not None}, query='{query.strip()}'")
             return []
         
         try:
+            logger.debug(f"BM25 검색 시작: query='{query}', limit={limit}")
             nodes_with_scores = self.retriever.retrieve(query)
+            logger.debug(f"BM25 원시 결과: {len(nodes_with_scores)}개")
             
             results = []
-            for node_with_score in nodes_with_scores:
+            for i, node_with_score in enumerate(nodes_with_scores):
                 if len(results) >= limit:
                     break
                     
                 node = node_with_score.node
+                score = node_with_score.score
+                
+                logger.debug(f"결과 #{i}: id={node.id_}, score={score}, content_length={len(node.text)}")
                 
                 # 필터 적용
                 if filters and not self._apply_filters(node.metadata, filters):
+                    logger.debug(f"필터로 제외된 결과: {node.id_}")
                     continue
                 
                 result = {
                     'id': node.id_,
                     'content': node.text,
                     'metadata': node.metadata,
-                    'score': float(node_with_score.score) if node_with_score.score else 0.0,
+                    'score': max(0.0, float(score)) if score is not None else 0.0,
                     'source': 'bm25'
                 }
                 results.append(result)
@@ -384,7 +462,7 @@ class CodeBM25Index(BaseIndex):
             return results
             
         except Exception as e:
-            logger.error(f"점수별 BM25 검색 실패: {e}")
+            logger.error(f"점수별 BM25 검색 실패: {e}", exc_info=True)
             return []
     
     def _apply_filters(self, metadata: Dict[str, Any], filters: Dict[str, Any]) -> bool:

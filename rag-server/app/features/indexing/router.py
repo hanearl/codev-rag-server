@@ -111,17 +111,15 @@ async def create_bm25_index(request: IndexingRequest):
         raise HTTPException(status_code=500, detail=f"BM25 인덱싱 중 오류가 발생했습니다: {str(e)}")
 
 
-@router.get("/stats", response_model=IndexStatsResponse)
+@router.get("/stats")
 async def get_index_stats():
     """
-    인덱스 통계 조회 API
+    인덱스 통계 조회
     
-    벡터 인덱스와 BM25 인덱스의 통계 정보를 조회합니다.
+    벡터 인덱스와 BM25 인덱스의 통계 정보를 반환합니다.
     """
     try:
-        result = await hybrid_indexing_service.get_index_stats()
-        if result.error_message:
-            raise HTTPException(status_code=500, detail=result.error_message)
+        result = await hybrid_indexing_service.get_stats()
         return result
     except Exception as e:
         logger.error(f"인덱스 통계 조회 실패: {e}")

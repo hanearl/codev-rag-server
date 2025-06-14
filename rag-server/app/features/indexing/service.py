@@ -141,9 +141,10 @@ class HybridIndexingService:
         start_time = time.time()
         
         try:
-            # 벡터 인덱스 생성
+            # 벡터 인덱스 생성 - collection_name 전달
             result = await self.vector_service.index_documents(
-                documents=request.documents
+                documents=request.documents,
+                collection_name=request.collection_name
             )
             
             index_time_ms = int((time.time() - start_time) * 1000)
@@ -168,9 +169,10 @@ class HybridIndexingService:
         start_time = time.time()
         
         try:
-            # BM25 인덱스 생성
+            # BM25 인덱스 생성 - collection_name 전달
             result = await self.bm25_service.index_documents(
-                documents=request.documents
+                documents=request.documents,
+                collection_name=request.collection_name
             )
             
             index_time_ms = int((time.time() - start_time) * 1000)
@@ -190,31 +192,26 @@ class HybridIndexingService:
                 index_time_ms=index_time_ms
             )
     
-    async def get_index_stats(self) -> IndexStatsResponse:
-        """인덱스 통계 조회"""
+    async def get_stats(self) -> Dict[str, Any]:
+        """인덱싱 서비스 통계"""
         try:
-            # 벡터 인덱스 통계
-            vector_stats = await self.vector_service.get_collection_stats()
+            vector_stats = await self.vector_service.get_stats()
+            bm25_stats = await self.bm25_service.get_global_stats()  # 전체 BM25 통계
             
-            # BM25 인덱스 통계
-            bm25_stats = await self.bm25_service.get_index_stats()
-            
-            # 전체 문서 수 계산
-            total_documents = vector_stats.get("total_documents", 0) + bm25_stats.get("total_documents", 0)
-            
-            return IndexStatsResponse(
-                vector_index_stats=vector_stats,
-                bm25_index_stats=bm25_stats,
-                total_documents=total_documents
-            )
+            return {
+                "vector_index_stats": vector_stats,
+                "bm25_index_stats": bm25_stats,
+                "total_documents": vector_stats.get("total_documents", 0) + bm25_stats.get("total_documents", 0),
+                "error_message": None
+            }
             
         except Exception as e:
-            return IndexStatsResponse(
-                vector_index_stats={},
-                bm25_index_stats={},
-                total_documents=0,
-                error_message=f"통계 조회 실패: {str(e)}"
-            )
+            return {
+                "error_message": f"통계 조회 실패: {str(e)}",
+                "vector_index_stats": {},
+                "bm25_index_stats": {},
+                "total_documents": 0
+            }
     
     async def delete_vector_collection(self, collection_name: str) -> Dict[str, str]:
         """벡터 컬렉션 삭제"""
@@ -224,13 +221,23 @@ class HybridIndexingService:
         except Exception as e:
             raise Exception(f"벡터 컬렉션 삭제 실패: {str(e)}")
     
-    async def delete_bm25_index(self, index_name: str) -> Dict[str, str]:
+    async def delete_bm25_index(self, collection_name: str) -> Dict[str, Any]:
         """BM25 인덱스 삭제"""
         try:
-            # delete_index 메서드가 없을 수 있으므로 기본 응답
-            return {"message": f"BM25 인덱스 '{index_name}' 삭제 요청이 처리되었습니다."}
+            result = await self.bm25_service.delete_collection(collection_name)
+            
+            return {
+                "success": result,
+                "collection_name": collection_name,
+                "message": f"BM25 컬렉션 '{collection_name}' 삭제 완료" if result else f"컬렉션 '{collection_name}'을 찾을 수 없음"
+            }
+            
         except Exception as e:
-            raise Exception(f"BM25 인덱스 삭제 실패: {str(e)}")
+            return {
+                "success": False,
+                "collection_name": collection_name,
+                "error": f"BM25 컬렉션 삭제 실패: {str(e)}"
+            }
     
     async def health_check(self) -> Dict[str, Any]:
         """서비스 헬스체크"""

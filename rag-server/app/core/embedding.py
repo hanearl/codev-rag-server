@@ -19,18 +19,29 @@ class CustomEmbeddingModel(BaseEmbedding):
             embed_batch_size=10,
             model_name="sentence-transformers/all-MiniLM-L6-v2"
         )
-        self.embedding_server_url = settings.embedding_server_url
-        self.client = httpx.AsyncClient(timeout=30.0)
+        # object.__setattr__을 사용하여 Pydantic 검증 우회
+        object.__setattr__(self, '_embedding_server_url', settings.embedding_server_url)
+        object.__setattr__(self, 'client', httpx.AsyncClient(timeout=30.0))
     
     def _get_query_embedding(self, query: str) -> List[float]:
         """쿼리 임베딩 생성 (동기)"""
-        return asyncio.run(self._aget_query_embedding(query))
+        try:
+            # 이미 실행 중인 event loop가 있는지 확인
+            loop = asyncio.get_running_loop()
+            # 실행 중인 loop가 있으면 create_task 사용
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(asyncio.run, self._aget_query_embedding(query))
+                return future.result()
+        except RuntimeError:
+            # 실행 중인 loop가 없으면 asyncio.run 사용
+            return asyncio.run(self._aget_query_embedding(query))
     
     async def _aget_query_embedding(self, query: str) -> List[float]:
         """쿼리 임베딩 생성 (비동기)"""
         try:
             response = await self.client.post(
-                f"{self.embedding_server_url}/api/v1/embedding/embed",
+                f"{self._embedding_server_url}/embedding/embed",
                 json={"text": query}
             )
             
@@ -49,7 +60,17 @@ class CustomEmbeddingModel(BaseEmbedding):
     
     def _get_text_embedding(self, text: str) -> List[float]:
         """텍스트 임베딩 생성 (동기)"""
-        return asyncio.run(self._aget_text_embedding(text))
+        try:
+            # 이미 실행 중인 event loop가 있는지 확인
+            loop = asyncio.get_running_loop()
+            # 실행 중인 loop가 있으면 create_task 사용
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(asyncio.run, self._aget_text_embedding(text))
+                return future.result()
+        except RuntimeError:
+            # 실행 중인 loop가 없으면 asyncio.run 사용
+            return asyncio.run(self._aget_text_embedding(text))
     
     async def _aget_text_embedding(self, text: str) -> List[float]:
         """텍스트 임베딩 생성 (비동기)"""
@@ -57,13 +78,23 @@ class CustomEmbeddingModel(BaseEmbedding):
     
     def _get_text_embeddings(self, texts: List[str]) -> List[List[float]]:
         """여러 텍스트 임베딩 생성 (동기)"""
-        return asyncio.run(self._aget_text_embeddings(texts))
+        try:
+            # 이미 실행 중인 event loop가 있는지 확인
+            loop = asyncio.get_running_loop()
+            # 실행 중인 loop가 있으면 create_task 사용
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(asyncio.run, self._aget_text_embeddings(texts))
+                return future.result()
+        except RuntimeError:
+            # 실행 중인 loop가 없으면 asyncio.run 사용
+            return asyncio.run(self._aget_text_embeddings(texts))
     
     async def _aget_text_embeddings(self, texts: List[str]) -> List[List[float]]:
         """여러 텍스트 임베딩 생성 (비동기)"""
         try:
             response = await self.client.post(
-                f"{self.embedding_server_url}/api/v1/embedding/embed/bulk",
+                f"{self._embedding_server_url}/embedding/embed/bulk",
                 json={"texts": texts}
             )
             

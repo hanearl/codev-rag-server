@@ -34,29 +34,39 @@ class VectorIndexService:
         if not self._initialized:
             await self.initialize()
     
-    async def index_documents(self, documents: List[EnhancedDocument]) -> Dict[str, Any]:
+    async def index_documents(self, documents: List[EnhancedDocument], collection_name: str = None) -> Dict[str, Any]:
         """문서들 인덱싱"""
-        await self._ensure_initialized()
+        # collection_name이 제공되면 새로운 인덱스 인스턴스 생성
+        if collection_name and collection_name != self.config.collection_name:
+            temp_config = VectorIndexConfig(collection_name=collection_name, vector_size=384)
+            temp_index = CodeVectorIndex(temp_config)
+            await temp_index.setup()
+            current_index = temp_index
+            current_collection = collection_name
+        else:
+            await self._ensure_initialized()
+            current_index = self.index
+            current_collection = self.config.collection_name
         
         if not documents:
             return {
                 "success": True,
                 "indexed_count": 0,
                 "document_ids": [],
-                "collection": self.config.collection_name,
+                "collection": current_collection,
                 "message": "인덱싱할 문서가 없습니다"
             }
         
         try:
-            added_ids = await self.index.add_documents(documents)
+            added_ids = await current_index.add_documents(documents)
             
-            logger.info(f"문서 인덱싱 완료: {len(added_ids)}개")
+            logger.info(f"문서 인덱싱 완료: {len(added_ids)}개 (컬렉션: {current_collection})")
             
             return {
                 "success": True,
                 "indexed_count": len(added_ids),
                 "document_ids": added_ids,
-                "collection": self.config.collection_name,
+                "collection": current_collection,
                 "message": f"{len(added_ids)}개 문서가 성공적으로 인덱싱되었습니다"
             }
         except Exception as e:
@@ -65,7 +75,7 @@ class VectorIndexService:
                 "success": False,
                 "error": str(e),
                 "indexed_count": 0,
-                "collection": self.config.collection_name
+                "collection": current_collection
             }
     
     async def index_legacy_documents(self, documents: List[Dict[str, Any]]) -> Dict[str, Any]:
